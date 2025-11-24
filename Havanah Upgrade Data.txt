@@ -1,0 +1,3912 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { motion } from 'framer-motion';
+import { 
+  FiShield, 
+  FiClock, 
+  FiStar, 
+  FiTrendingUp,
+  FiArrowRight 
+} from 'react-icons/fi';
+import { 
+  MdApartment, 
+  MdDirectionsCar,
+  MdFavoriteBorder, 
+  MdFavorite, 
+  MdLocationOn, 
+  MdBed, 
+  MdBathtub, 
+  MdElectricCar 
+} from 'react-icons/md';
+import Navbar from '@/components/layout/navbar/navbar';
+import { getAllListings } from '@/lib/firestore-service';
+
+// --- Interfaces ---
+interface Feature {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+}
+
+interface ListingCardProps {
+  listing: {
+    id: string;
+    title: string;
+    price: number;
+    location: string;
+    images: string[];
+    type: 'house' | 'car';
+    category: 'rent' | 'sale';
+    bedrooms?: number;
+    bathrooms?: number;
+    brand?: string;
+    model?: string;
+    year?: number;
+  };
+}
+
+// --- Constants ---
+const features: Feature[] = [
+  {
+    icon: <FiShield />, 
+    title: 'Verified Listings',
+    description: 'All properties and vehicles are verified for your safety',
+  },
+  {
+    icon: <FiClock />, 
+    title: 'Instant Booking',
+    description: 'Book apartments and cars in just a few clicks',
+  },
+  {
+    icon: <FiStar />, 
+    title: 'Quality Service',
+    description: 'Top-rated hosts and car owners with excellent reviews',
+  },
+  {
+    icon: <FiTrendingUp />, 
+    title: 'Best Prices',
+    description: 'Competitive rates with transparent pricing',
+  },
+];
+
+// --- Sub Component: Listing Card ---
+const ListingCard = ({ listing }: ListingCardProps) => {
+  const [isFavorite, setIsFavorite] = React.useState(false);
+  const imageUrl = listing.images?.[0] || '/placeholder.png';
+  const isHouse = listing.type === 'house';
+  const isRent = listing.category === 'rent';
+
+  return (
+    <Link href={`/explore/${listing.id}`} className="block h-full">
+      <motion.div
+        whileHover={{ y: -8 }}
+        transition={{ duration: 0.3 }}
+        className="h-full flex flex-col bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl border border-gray-100 transition-shadow duration-300 cursor-pointer group"
+      >
+        {/* Image Container */}
+        <div className="relative w-full h-[200px] bg-gray-100 overflow-hidden">
+          <img 
+            src={imageUrl} 
+            alt={listing.title}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            onError={(e) => {
+              e.currentTarget.src = '/placeholder.png';
+            }}
+          />
+          {/* Gradient Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          
+          {/* Category Badge */}
+          <div className="absolute top-3 left-3 bg-gradient-to-br from-emerald-500/90 to-amber-500/80 backdrop-blur-sm text-white px-3 py-1.5 rounded-md text-xs font-bold shadow-sm">
+            {isRent ? 'For Rent' : 'For Sale'}
+          </div>
+
+          {/* Favorite Button */}
+          <motion.button
+            onClick={(e) => {
+              e.preventDefault();
+              setIsFavorite(!isFavorite);
+            }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            className="absolute top-3 right-3 w-9 h-9 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm hover:bg-white transition-colors"
+          >
+            {isFavorite ? 
+              <MdFavorite className="w-5 h-5 text-red-500" /> :
+              <MdFavoriteBorder className="w-5 h-5 text-gray-600" />
+            }
+          </motion.button>
+        </div>
+
+        {/* Content */}
+        <div className="p-4 flex flex-col flex-1">
+          <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-emerald-600 transition-colors">
+            {listing.title}
+          </h3>
+          
+          <div className="flex items-center gap-1.5 text-sm text-gray-500 mb-3">
+            <MdLocationOn className="w-4 h-4 text-emerald-500 shrink-0" />
+            <span className="truncate">{listing.location}</span>
+          </div>
+
+          {/* Features Chips */}
+          <div className="flex flex-wrap gap-2 mb-auto">
+            {isHouse ? (
+              <>
+                {listing.bedrooms && (
+                  <div className="flex items-center gap-1 text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
+                    <MdBed className="w-4 h-4 text-emerald-500" />
+                    <span>{listing.bedrooms} Bed</span>
+                  </div>
+                )}
+                {listing.bathrooms && (
+                  <div className="flex items-center gap-1 text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
+                    <MdBathtub className="w-4 h-4 text-emerald-500" />
+                    <span>{listing.bathrooms} Bath</span>
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                {listing.brand && (
+                  <div className="flex items-center gap-1 text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
+                    <MdElectricCar className="w-4 h-4 text-emerald-500" />
+                    <span>{listing.brand} {listing.model}</span>
+                  </div>
+                )}
+                {listing.year && (
+                  <div className="flex items-center gap-1 text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
+                    <FiClock className="w-3.5 h-3.5 text-emerald-500" />
+                    <span>{listing.year}</span>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Price Footer */}
+          <div className="mt-4 pt-3 border-t border-gray-100 flex items-baseline gap-1">
+            <span className="text-xl font-bold text-emerald-600">${listing.price}</span>
+            <span className="text-sm text-gray-500">{isRent ? '/month' : 'total'}</span>
+          </div>
+        </div>
+      </motion.div>
+    </Link>
+  );
+};
+
+// --- Main Landing Page Component ---
+export default function LandingPage() {
+  const [apartments, setApartments] = useState<any[]>([]);
+  const [cars, setCars] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchListings = async () => {
+      try {
+        const allListings = await getAllListings();
+        
+        const apartmentListings = allListings.filter(l => l.type === 'house').slice(0, 3);
+        const carListings = allListings.filter(l => l.type === 'car').slice(0, 3);
+        
+        setApartments(apartmentListings);
+        setCars(carListings);
+      } catch (error) {
+        console.error('Error fetching listings:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchListings();
+  }, []);
+
+  return (
+    <div className="w-full bg-white">
+      <Navbar />
+      
+      {/* Hero Section */}
+      {/* Note: Replace '/hero-image.jpg' with your actual image path */}
+      <motion.section 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.8 }}
+        className="relative min-h-[600px] flex items-center justify-center overflow-hidden mt-20 bg-[url('/hero-image.jpg')] bg-fixed bg-center bg-cover bg-no-repeat bg-gray-900 text-white"
+      >
+        {/* Dark Overlay */}
+        <div className="absolute inset-0 bg-black/50 z-0" />
+        
+        <div className="relative z-10 text-center px-8 py-16 w-full max-w-7xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.8 }}
+            className="max-w-3xl mx-auto"
+          >
+            <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold mb-6 tracking-tight leading-[1.1]">
+              Where Living Meets Moving
+            </h1>
+            <p className="text-lg sm:text-xl md:text-2xl mb-10 text-gray-100 font-medium opacity-95">
+              Find your perfect apartment or rent the ideal car
+            </p>
+            
+            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center">
+              <Link 
+                href="/explore?type=house" 
+                className="inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl font-semibold text-white bg-emerald-500 hover:bg-emerald-600 hover:-translate-y-1 transition-all shadow-lg shadow-emerald-500/40 w-full sm:w-auto min-w-[220px]"
+              >
+                <MdApartment className="w-5 h-5" />
+                Find an Apartment
+              </Link>
+              <Link 
+                href="/explore?type=car" 
+                className="inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl font-semibold text-white bg-amber-400 hover:bg-amber-500 hover:-translate-y-1 transition-all shadow-lg shadow-amber-400/40 w-full sm:w-auto min-w-[220px]"
+              >
+                <MdDirectionsCar className="w-5 h-5" />
+                Rent a Car
+              </Link>
+            </div>
+          </motion.div>
+        </div>
+      </motion.section>
+
+      {/* Features Section */}
+      <section className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {features.map((feature, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1, duration: 0.8 }}
+                viewport={{ once: true }}
+                className="bg-white p-10 rounded-xl text-center border border-gray-200 hover:-translate-y-1 hover:shadow-xl hover:border-gray-300 transition-all duration-300 flex flex-col items-center group"
+              >
+                {/* Icon Wrapper with Green to Gold Gradient */}
+                <div className="w-20 h-20 flex items-center justify-center bg-gradient-to-br from-green-500 to-yellow-600 rounded-full mb-6 text-white text-3xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                  {/* Ensure stroke/size matches provided design */}
+                  <div className="[&>svg]:stroke-[2] [&>svg]:w-9 [&>svg]:h-9">
+                    {feature.icon}
+                  </div>
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-3 tracking-tight">
+                  {feature.title}
+                </h3>
+                <p className="text-[0.95rem] text-gray-500 leading-relaxed">
+                  {feature.description}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Trending Apartments */}
+      <section className="py-20 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-12">
+            <div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">Trending Apartments</h2>
+              <p className="text-lg text-gray-600">Discover the most popular apartment listings</p>
+            </div>
+            <Link href="/explore?type=house" className="flex items-center gap-2 text-emerald-600 hover:text-emerald-700 font-semibold transition-colors">
+              View All <FiArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          {isLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="bg-gray-200 rounded-xl h-[380px] animate-pulse" />
+              ))}
+            </div>
+          ) : apartments.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+              {apartments.map((apartment, index) => (
+                <motion.div
+                  key={apartment.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1, duration: 0.8 }}
+                  viewport={{ once: true }}
+                >
+                  <ListingCard listing={apartment} />
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 text-gray-500 text-lg">
+              <p>No apartments available at the moment</p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Featured Cars */}
+      <section className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-12">
+            <div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">Featured Cars</h2>
+              <p className="text-lg text-gray-600">Browse our exclusive car collection</p>
+            </div>
+            <Link href="/explore?type=car" className="flex items-center gap-2 text-emerald-600 hover:text-emerald-700 font-semibold transition-colors">
+              View All <FiArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          {isLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="bg-gray-200 rounded-xl h-[380px] animate-pulse" />
+              ))}
+            </div>
+          ) : cars.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+              {cars.map((car, index) => (
+                <motion.div
+                  key={car.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1, duration: 0.8 }}
+                  viewport={{ once: true }}
+                >
+                  <ListingCard listing={car} />
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 text-gray-500 text-lg">
+              <p>No cars available at the moment</p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-20 bg-gradient-to-br from-emerald-500 to-amber-500 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+            className="text-center max-w-2xl mx-auto"
+          >
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold mb-4 tracking-tight">
+              Ready to Get Started?
+            </h2>
+            <p className="text-lg text-white/95 mb-8 font-medium">
+              Join thousands of happy customers who found their perfect apartment or car
+            </p>
+            <Link 
+              href="/auth/" 
+              className="inline-block px-8 py-3.5 bg-white/95 text-emerald-600 rounded-lg font-bold hover:bg-white hover:-translate-y-1 transition-all shadow-lg hover:shadow-xl backdrop-blur-md"
+            >
+              Sign Up Now
+            </Link>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-gradient-to-br from-gray-900 to-gray-800 text-white pt-16 pb-6 border-t border-white/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
+            <div className="flex flex-col gap-4">
+              <h4 className="text-lg font-bold text-white">About HAVANA</h4>
+              <p className="text-gray-300 text-sm leading-relaxed">
+                Premium platform for renting and selling properties and vehicles with ease and confidence.
+              </p>
+            </div>
+            <div className="flex flex-col gap-4">
+              <h4 className="text-lg font-bold text-white">Quick Links</h4>
+              <ul className="space-y-3 text-sm text-gray-300">
+                <li><Link href="/" className="hover:text-emerald-400 transition-colors">Home</Link></li>
+                <li><Link href="/explore" className="hover:text-emerald-400 transition-colors">Explore</Link></li>
+                <li><Link href="/explore?type=house" className="hover:text-emerald-400 transition-colors">Apartments</Link></li>
+                <li><Link href="/explore?type=car" className="hover:text-emerald-400 transition-colors">Cars</Link></li>
+              </ul>
+            </div>
+            <div className="flex flex-col gap-4">
+              <h4 className="text-lg font-bold text-white">Legal</h4>
+              <ul className="space-y-3 text-sm text-gray-300">
+                <li><a href="#" className="hover:text-emerald-400 transition-colors">Privacy Policy</a></li>
+                <li><a href="#" className="hover:text-emerald-400 transition-colors">Terms of Service</a></li>
+                <li><a href="#" className="hover:text-emerald-400 transition-colors">Contact Us</a></li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t border-white/10 pt-8 text-center">
+            <p className="text-gray-400 text-sm">&copy; 2024 HAVANA. All rights reserved.</p>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+
+'use client';
+
+import React, { useState } from 'react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { motion, useScroll, useMotionValueEvent } from 'framer-motion';
+import { MdMenu, MdClose, MdDashboard, MdApartment, MdDirectionsCar, MdExplore, MdHome } from 'react-icons/md';
+import { useAuth } from '@/lib/auth-store';
+
+export default function Navbar() {
+  const { user } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { scrollY } = useScroll();
+
+  useMotionValueEvent(scrollY, "change", (latest) => {
+    setIsScrolled(latest > 50);
+  });
+
+  const isLanding = pathname === '/';
+
+  const navLinks = [
+    { href: '/', label: 'Home', icon: <MdHome /> },
+    { href: '/explore?type=house', label: 'Apartments', icon: <MdApartment /> },
+    { href: '/explore?type=car', label: 'Rent a Car', icon: <MdDirectionsCar /> },
+    { href: '/explore', label: 'Explore All', icon: <MdExplore /> },
+  ];
+
+  // Helper to check active state
+  const isActive = (path: string) => pathname === path || (path.includes('?') && pathname.includes('explore'));
+
+  return (
+    <header 
+      className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-300 ease-out
+        ${isScrolled || !isLanding 
+          ? 'h-[70px] bg-white/80 backdrop-blur-[25px] shadow-[0_4px_20px_rgba(0,0,0,0.1)] border-b border-white/40' 
+          : 'h-[80px] bg-white/70 backdrop-blur-[20px] border-b border-white/30'
+        } text-gray-900`}
+    >
+      <div className="max-w-[1280px] mx-auto h-full flex items-center justify-between px-4 md:px-8">
+        {/* Logo */}
+        <Link href="/" className="flex items-center gap-2 font-extrabold text-2xl tracking-tight hover:opacity-80 transition-opacity duration-300">
+          <img src="/logo.jpg" alt="HAVANA" className="h-[50px] w-auto object-contain" />
+        </Link>
+
+        {/* Desktop Nav */}
+        <nav className="hidden md:flex gap-8">
+          {navLinks.map((link) => (
+            <Link 
+              key={link.href}
+              href={link.href} 
+              className={`relative flex items-center gap-2 text-[0.95rem] font-medium transition-all duration-300 group
+                bg-gradient-to-br from-emerald-500 to-amber-500 bg-clip-text text-transparent
+                ${isActive(link.href) ? 'opacity-100 font-semibold' : ''}`}
+            >
+              <span className="inline-flex items-center text-xl text-emerald-500 stroke-emerald-500 stroke-[1.5]">
+                {link.icon}
+              </span>
+              {link.label}
+              {/* Underline Animation */}
+              <span className={`absolute -bottom-1.5 left-0 h-[2px] bg-gradient-to-br from-emerald-500 to-amber-500 transition-all duration-300 ease-out
+                ${isActive(link.href) ? 'w-full' : 'w-0 group-hover:w-full'}`} 
+              />
+            </Link>
+          ))}
+        </nav>
+
+        {/* Actions */}
+        <div className="flex items-center gap-6">
+          {user ? (
+            <>
+              {user.role === 'user' && (
+                <Link 
+                  href="/upgrade" 
+                  className="hidden md:inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold text-[0.95rem] text-white bg-gradient-to-br from-amber-500 to-red-500 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_16px_rgba(245,158,11,0.3)]"
+                >
+                  Become an Agent
+                </Link>
+              )}
+              <button 
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold text-white bg-gradient-to-br from-emerald-500 to-amber-500 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(16,185,129,0.3)]"
+                onClick={() => router.push(user.role === 'agent' ? '/agent/dashboard' : '/user/dashboard')}
+              >
+                <MdDashboard /> Dashboard
+              </button>
+            </>
+          ) : (
+            <>
+              <Link 
+                href="/auth" 
+                className="hidden md:inline-block font-semibold text-[0.95rem] bg-gradient-to-br from-emerald-500 to-amber-500 bg-clip-text text-transparent hover:opacity-80 transition-all duration-300"
+              >
+                Log In
+              </Link>
+              <Link 
+                href="/auth" 
+                className="hidden md:inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold text-[0.95rem] text-white bg-gradient-to-br from-emerald-500 to-amber-500 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_16px_rgba(16,185,129,0.3)]"
+              >
+                Sign Up
+              </Link>
+            </>
+          )}
+          
+          {/* Mobile Toggle */}
+          <button 
+            className="md:hidden text-2xl text-gray-900 bg-none border-none cursor-pointer hover:opacity-70 transition-opacity duration-300"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            {mobileMenuOpen ? <MdClose /> : <MdMenu />}
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Menu */}
+      {mobileMenuOpen && (
+        <motion.div 
+          className="absolute top-full left-0 right-0 bg-white p-6 flex flex-col gap-4 shadow-[0_10px_30px_rgba(0,0,0,0.1)] border-t border-gray-100 md:hidden"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          {navLinks.map((link) => (
+            <Link 
+              key={link.href}
+              href={link.href} 
+              onClick={() => setMobileMenuOpen(false)}
+              className={`text-left py-2 text-[1.1rem] font-semibold flex items-center gap-3 transition-colors duration-300
+                ${isActive(link.href) ? 'text-emerald-500' : 'text-gray-900 hover:text-emerald-500'}`}
+            >
+              <span className="text-xl text-emerald-500">{link.icon}</span>
+              {link.label}
+            </Link>
+          ))}
+          <hr className="border-gray-100" />
+          {user ? (
+            <>
+              {user.role === 'user' && (
+                <Link 
+                  href="/upgrade" 
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-left py-2 text-[1.1rem] font-semibold text-gray-900 hover:text-emerald-500"
+                >
+                  Become an Agent
+                </Link>
+              )}
+              <button 
+                onClick={() => router.push(user.role === 'agent' ? '/agent/dashboard' : '/user/dashboard')}
+                className="text-left py-2 text-[1.1rem] font-semibold text-gray-900 hover:text-emerald-500"
+              >
+                My Dashboard
+              </button>
+            </>
+          ) : (
+            <div className="flex flex-col gap-4 mt-2">
+              <Link href="/auth" onClick={() => setMobileMenuOpen(false)} className="text-center font-semibold text-gray-900">Log In</Link>
+              <Link href="/auth" onClick={() => setMobileMenuOpen(false)} className="text-center font-semibold text-white bg-gradient-to-br from-emerald-500 to-amber-500 py-3 rounded-lg">Sign Up</Link>
+            </div>
+          )}
+        </motion.div>
+      )}
+    </header>
+  );
+}
+
+'use client';
+
+import React, { useMemo } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { motion } from 'framer-motion';
+import { 
+  MdDashboard, 
+  MdExplore, 
+  MdFavoriteBorder, 
+  MdMail, 
+  MdNotifications,
+  MdLogout, 
+  MdPerson,
+  MdSell
+} from 'react-icons/md';
+import { useAuth } from '@/lib/auth-store';
+
+interface NavItem {
+  id: string;
+  label: string;
+  href: string;
+  icon: React.ReactNode;
+}
+
+export default function Sidebar() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { user, logout } = useAuth();
+
+  if (pathname?.includes('/auth')) {
+    return null;
+  }
+
+  const navItems: NavItem[] = useMemo(() => {
+    const baseItems = [
+      { id: 'dashboard', label: 'Dashboard', href: user?.role === 'agent' ? '/agent/dashboard' : '/account', icon: <MdDashboard /> },
+      { id: 'explore', label: 'Explore', href: '/explore', icon: <MdExplore /> },
+      { id: 'messages', label: 'Messages', href: '/messaging', icon: <MdMail /> },
+      { id: 'notifications', label: 'Notifications', href: '/notifications', icon: <MdNotifications /> }
+    ];
+
+    const userItems = [
+      { id: 'wishlist', label: 'Wishlist', href: '/user/wishlist', icon: <MdFavoriteBorder /> },
+    ];
+
+    const agentItems = [
+      { id: 'listings', label: 'My Listings', href: '/agent/dashboard', icon: <MdSell /> },
+    ];
+
+    let items = [...baseItems];
+    if (user?.role === 'agent') {
+      items = [...items, ...agentItems];
+    } else {
+      items = [...items, ...userItems];
+    }
+
+    items.push({
+      id: 'account',
+      label: 'My Profile',
+      href: '/account',
+      icon: <MdPerson />,
+    });
+
+    return items;
+  }, [user?.role]);
+
+  const isActive = (href: string) => {
+    if (href === '/explore' && pathname === '/explore') return true;
+    if (href !== '/explore' && pathname?.startsWith(href)) return true;
+    return false;
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    router.push('/auth/login');
+  };
+
+  const renderUpgradeCTA = () => {
+    if (!user) return null;
+    if (user.role !== 'agent') {
+      return (
+        <motion.div 
+          className="bg-gradient-to-br from-emerald-50 to-white border border-emerald-500/20 rounded-2xl p-5 flex flex-col gap-4 shadow-[0_4px_12px_rgba(16,185,129,0.05)]"
+          whileHover={{ y: -2 }}
+        >
+          <div className="flex flex-col">
+            <h4 className="m-0 mb-1 text-sm font-bold text-emerald-800">Become an Agent</h4>
+            <p className="m-0 text-xs text-emerald-600 leading-relaxed">List your property today</p>
+          </div>
+          <button 
+            className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white border-none px-2.5 py-2 rounded-lg text-xs font-semibold cursor-pointer transition-all duration-300 shadow-[0_2px_6px_rgba(16,185,129,0.3)] hover:translate-y-[-2px] hover:shadow-[0_4px_12px_rgba(16,185,129,0.4)]"
+            onClick={() => router.push('/upgrade')}
+          >
+            Upgrade
+          </button>
+        </motion.div>
+      );
+    }
+    const plan = (user as any).agentPlan || 'basic';
+    if (plan !== 'enterprise') {
+      return (
+        <motion.div 
+          className="bg-gradient-to-br from-emerald-50 to-white border border-emerald-500/20 rounded-2xl p-5 flex flex-col gap-4 shadow-[0_4px_12px_rgba(16,185,129,0.05)]"
+          whileHover={{ y: -2 }}
+        >
+          <div className="flex flex-col">
+            <h4 className="m-0 mb-1 text-sm font-bold text-emerald-800">Upgrade Plan</h4>
+            <p className="m-0 text-xs text-emerald-600 leading-relaxed">Get more listings & insights</p>
+          </div>
+          <button 
+            className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white border-none px-2.5 py-2 rounded-lg text-xs font-semibold cursor-pointer transition-all duration-300 shadow-[0_2px_6px_rgba(16,185,129,0.3)] hover:translate-y-[-2px] hover:shadow-[0_4px_12px_rgba(16,185,129,0.4)]"
+            onClick={() => router.push('/upgrade')}
+          >
+            View Plans
+          </button>
+        </motion.div>
+      );
+    }
+    return null;
+  };
+
+  return (
+    /* Wrapper: Fixed sidebar, hidden on mobile (transform logic or hidden class) */
+    <aside className="fixed top-0 left-0 h-screen w-[280px] z-50 flex flex-col p-6 transition-all duration-300 max-lg:w-[240px] max-md:-translate-x-full">
+      
+      {/* Glass Background Layer */}
+      <div className="absolute inset-0 bg-white/85 backdrop-blur-[20px] border-r border-white/60 shadow-[5px_0_25px_rgba(0,0,0,0.02)] -z-10 box-border" />
+      
+      <div className="flex flex-col h-full gap-8 relative z-10">
+        
+        {/* Profile Section */}
+        <Link href="/account" className="block text-inherit no-underline">
+          <motion.div 
+            className="flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-br from-white/90 to-white/40 border border-white/80 shadow-[0_4px_12px_rgba(0,0,0,0.03)] cursor-pointer transition-colors hover:bg-white/80"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <div className="relative w-12 h-12 rounded-full p-[2px] bg-gradient-to-br from-amber-400 to-emerald-500 shrink-0">
+              {user?.photoURL ? (
+                <img 
+                  src={user.photoURL} 
+                  alt={user.displayName || 'User'} 
+                  className="w-full h-full rounded-full object-cover border-2 border-white bg-gray-100"
+                />
+              ) : (
+                <div className="w-full h-full rounded-full bg-white flex items-center justify-center text-emerald-500 font-bold text-xl border-2 border-white">
+                  {user?.displayName?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
+                </div>
+              )}
+              {/* Online Badge */}
+              <div className="absolute bottom-0.5 right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full shadow-sm" />
+            </div>
+            
+            <div className="flex-1 overflow-hidden">
+              <h3 className="m-0 text-[0.95rem] font-bold text-gray-900 truncate">
+                {user?.displayName || 'Welcome Back'}
+              </h3>
+              <p className="m-0 text-xs text-gray-500 truncate capitalize">
+                {user?.role === 'agent' ? 'Agent' : 'Member'}
+              </p>
+            </div>
+          </motion.div>
+        </Link>
+
+        {/* Navigation */}
+        <nav className="flex-1 flex flex-col gap-4 overflow-y-auto pr-1">
+          <div className="text-[0.7rem] font-bold text-gray-400 uppercase tracking-widest pl-4 mb-2">MENU</div>
+          <div className="flex flex-col gap-2">
+            {navItems.map((item, index) => {
+              const active = isActive(item.href);
+              return (
+                <Link key={item.id} href={item.href} passHref legacyBehavior>
+                  <motion.a
+                    className={`relative flex items-center gap-4 px-4 py-3.5 rounded-xl no-underline text-[0.95rem] transition-colors duration-200 group
+                      ${active 
+                        ? 'text-emerald-500 font-semibold bg-gradient-to-r from-emerald-500/10 to-emerald-500/5' 
+                        : 'text-gray-600 font-medium bg-transparent hover:text-emerald-500'}`}
+                    whileHover={{ x: 4, backgroundColor: 'rgba(16, 185, 129, 0.05)' }}
+                    whileTap={{ scale: 0.98 }}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.1 + index * 0.05 }}
+                  >
+                    <span className="flex items-center justify-center text-2xl transition-transform duration-200 group-hover:scale-110">
+                      {item.icon}
+                    </span>
+                    <span className="whitespace-nowrap">{item.label}</span>
+                    
+                    {active && (
+                      <motion.div 
+                        layoutId="activeIndicator"
+                        className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-emerald-500 rounded-l shadow-[-2px_0_8px_rgba(16,185,129,0.4)]"
+                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                      />
+                    )}
+                  </motion.a>
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
+
+        {/* Footer Actions */}
+        <div className="flex flex-col gap-4 pt-4 border-t border-gray-200/50">
+          {renderUpgradeCTA()}
+
+          <motion.button 
+            onClick={handleLogout} 
+            className="flex items-center gap-3 px-4 py-3.5 bg-transparent border-none rounded-xl text-gray-500 text-[0.9rem] font-medium cursor-pointer transition-all duration-200 w-full text-left hover:bg-red-50 hover:text-red-500"
+            whileTap={{ scale: 0.98 }}
+          >
+            <MdLogout className="text-xl" />
+            <span>Sign Out</span>
+          </motion.button>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { 
+  MdSearch,
+  MdNotifications,
+  MdTrendingUp,
+  MdMoreHoriz,
+  MdCheck,
+  MdClose,
+  MdAdd,
+  MdHomeWork,
+} from 'react-icons/md';
+import { 
+  collection, 
+  query, 
+  where, 
+  getDocs, 
+  doc, 
+  updateDoc,
+} from 'firebase/firestore';
+import { getFirestoreInstance } from '@/lib/firebase';
+import { useAuth } from '@/lib/auth-store';
+import { useToast } from '@/components/toast/toast';
+
+// Types
+interface Listing {
+  id: string;
+  title: string;
+  location: string;
+  images: string[];
+  type: 'house' | 'car';
+  status: 'active' | 'pending' | 'sold';
+  price: number;
+  views: number;
+  createdAt: any;
+}
+
+interface Inquiry {
+  id: string;
+  userName: string;
+  userPhoto?: string;
+  listingTitle: string;
+  listingId: string;
+  offerAmount?: number;
+  message: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  createdAt: any;
+}
+
+interface DashboardStats {
+  activeListings: number;
+  pendingOffers: number;
+  totalEarnings: number;
+  viewsTotal: number;
+}
+
+export default function AgentDashboard() {
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
+  const toast = useToast();
+  
+  const [stats, setStats] = useState<DashboardStats>({
+    activeListings: 0,
+    pendingOffers: 0,
+    totalEarnings: 0,
+    viewsTotal: 0
+  });
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [inquiries, setInquiries] = useState<Inquiry[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeFilter, setActiveFilter] = useState('All');
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user?.id) {
+        if (!authLoading) setIsLoading(false);
+        return;
+      }
+      
+      try {
+        const db = getFirestoreInstance();
+        
+        // 1. Fetch Listings
+        const listingsRef = collection(db, 'listings');
+        const qListings = query(listingsRef, where('agentId', '==', user.id));
+        const listingsSnap = await getDocs(qListings);
+        
+        const fetchedListings: Listing[] = [];
+        let activeCount = 0;
+        let totalViews = 0;
+        let earnings = 0;
+
+        listingsSnap.forEach(doc => {
+          const data = doc.data();
+          fetchedListings.push({
+            id: doc.id,
+            title: data.title,
+            location: data.location || data.address || 'No location',
+            images: data.images || [],
+            type: data.type,
+            status: data.status,
+            price: data.price,
+            views: data.views || 0,
+            createdAt: data.createdAt
+          });
+
+          if (data.status === 'active') activeCount++;
+          totalViews += (data.views || 0);
+          if (data.status === 'sold') earnings += (data.price * 0.05); 
+        });
+
+        fetchedListings.sort((a, b) => 
+          (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)
+        );
+
+        setListings(fetchedListings);
+
+        // 2. Fetch Inquiries/Offers
+        const inquiriesRef = collection(db, 'inquiries');
+        const qInquiries = query(inquiriesRef, where('agentId', '==', user.id));
+        const inquiriesSnap = await getDocs(qInquiries);
+        
+        const fetchedInquiries: Inquiry[] = [];
+        inquiriesSnap.forEach(doc => {
+          const data = doc.data();
+          if (data.status === 'pending') {
+            fetchedInquiries.push({
+              id: doc.id,
+              userName: data.userName,
+              userPhoto: data.userPhoto,
+              listingTitle: data.listingTitle,
+              listingId: data.listingId,
+              offerAmount: data.offerAmount,
+              message: data.message,
+              status: data.status,
+              createdAt: data.createdAt
+            });
+          }
+        });
+
+        fetchedInquiries.sort((a, b) => 
+          (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)
+        );
+
+        setInquiries(fetchedInquiries);
+
+        setStats({
+          activeListings: activeCount,
+          pendingOffers: fetchedInquiries.length,
+          totalEarnings: earnings,
+          viewsTotal: totalViews
+        });
+
+        setIsLoading(false);
+      } catch (error: any) {
+        console.error("Dashboard Error:", error);
+        if (error.code !== 'permission-denied') {
+          toast.error("Data Error", "Failed to load dashboard data.");
+        }
+        setIsLoading(false);
+      }
+    };
+
+    if (!authLoading) {
+      fetchData();
+    }
+  }, [user, authLoading, toast]);
+
+  // Actions
+  const handleAcceptOffer = async (inquiryId: string) => {
+    try {
+      const db = getFirestoreInstance();
+      await updateDoc(doc(db, 'inquiries', inquiryId), { status: 'accepted' });
+      setInquiries(prev => prev.filter(i => i.id !== inquiryId));
+      toast.success('Offer Accepted', `You accepted the offer`);
+    } catch (error) {
+      toast.error('Action Failed', 'Could not accept offer');
+    }
+  };
+
+  const handleRejectOffer = async (inquiryId: string) => {
+    try {
+      const db = getFirestoreInstance();
+      await updateDoc(doc(db, 'inquiries', inquiryId), { status: 'rejected' });
+      setInquiries(prev => prev.filter(i => i.id !== inquiryId));
+      toast.info('Offer Rejected', 'You rejected the offer');
+    } catch (error) {
+      toast.error('Action Failed', 'Could not reject offer');
+    }
+  };
+
+  const filteredListings = activeFilter === 'All' 
+    ? listings 
+    : activeFilter === 'Houses'
+      ? listings.filter(l => l.type === 'house')
+      : listings.filter(l => l.type === 'car');
+
+  if (authLoading || isLoading) return <div className="min-h-screen flex items-center justify-center text-gray-500 font-medium">Loading Dashboard...</div>;
+
+  return (
+    <div className="w-full min-h-screen bg-gradient-to-br from-green-50 via-amber-50 to-blue-50 p-4 md:p-8 lg:p-12">
+      {/* Header */}
+      <header className="flex flex-col md:flex-row justify-between items-start mb-10 gap-6 flex-wrap">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">
+            Welcome back, <span className="bg-gradient-to-br from-emerald-500 to-emerald-700 bg-clip-text text-transparent">{user?.displayName || 'Agent'}</span>!
+          </h1>
+          <p className="text-gray-500 text-base">Here's an overview of your business.</p>
+        </div>
+        <div className="flex items-center gap-4">
+          <button 
+            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-br from-emerald-500 to-emerald-700 text-white border-none rounded-full font-semibold cursor-pointer transition-all duration-300 shadow-lg shadow-emerald-500/25 hover:-translate-y-0.5 hover:shadow-emerald-500/35"
+            onClick={() => router.push('/listings/add')}
+          >
+            <MdAdd className="text-xl" /> Add Listing
+          </button>
+        </div>
+      </header>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        {[
+          { label: 'Active Listings', value: stats.activeListings, icon: MdHomeWork },
+          { label: 'Pending Inquiries', value: stats.pendingOffers, icon: MdNotifications },
+          { label: 'Total Views', value: stats.viewsTotal, icon: MdTrendingUp },
+        ].map((stat, idx) => (
+          <div key={idx} className="bg-white/70 backdrop-blur-md border border-white/60 rounded-2xl p-6 shadow-sm flex flex-col gap-2 hover:scale-[1.02] transition-transform duration-300">
+            <p className="text-sm text-gray-500 font-medium">{stat.label}</p>
+            <div className="flex items-end gap-3">
+              <span className="text-3xl font-extrabold text-gray-900 leading-none">{stat.value}</span>
+              <stat.icon className="text-2xl text-emerald-600/80 mb-1" />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+        {/* Listings Section */}
+        <div className="xl:col-span-2 bg-white/70 backdrop-blur-md border border-white/60 rounded-[20px] p-6 shadow-sm flex flex-col gap-6">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <h2 className="text-xl font-bold text-gray-900">My Listings</h2>
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {['All', 'Houses', 'Cars'].map((filter) => (
+                <button 
+                  key={filter}
+                  onClick={() => setActiveFilter(filter)}
+                  className={`px-4 py-2 rounded-full border text-sm font-medium cursor-pointer whitespace-nowrap transition-all duration-200 
+                    ${activeFilter === filter 
+                      ? 'bg-emerald-50 text-emerald-600 border-emerald-200 font-semibold' 
+                      : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}`}
+                >
+                  {filter}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse min-w-[600px]">
+              <thead>
+                <tr className="border-b border-gray-200/50">
+                  <th className="text-left p-4 text-sm text-gray-500 font-semibold bg-gray-50/50 first:rounded-tl-lg">Listing</th>
+                  <th className="text-left p-4 text-sm text-gray-500 font-semibold bg-gray-50/50">Type</th>
+                  <th className="text-left p-4 text-sm text-gray-500 font-semibold bg-gray-50/50">Status</th>
+                  <th className="text-left p-4 text-sm text-gray-500 font-semibold bg-gray-50/50">Price</th>
+                  <th className="text-left p-4 text-sm text-gray-500 font-semibold bg-gray-50/50 last:rounded-tr-lg">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredListings.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="p-8 text-center text-gray-400 font-medium">
+                      No listings found.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredListings.map((listing) => (
+                    <tr key={listing.id} className="border-b border-gray-200/50 last:border-none hover:bg-white/40 transition-colors">
+                      <td className="p-4">
+                        <div className="flex items-center gap-4">
+                          <img 
+                            src={listing.images[0] || 'https://via.placeholder.com/50'} 
+                            alt={listing.title} 
+                            className="w-[60px] h-[45px] rounded-lg object-cover" 
+                          />
+                          <div>
+                            <p className="m-0 font-semibold text-gray-900 text-[0.95rem]">{listing.title}</p>
+                            <p className="m-0 text-xs text-gray-500">{listing.location}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4"><span className="text-sm text-gray-600 capitalize">{listing.type}</span></td>
+                      <td className="p-4">
+                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide
+                          ${listing.status === 'active' ? 'bg-emerald-100/60 text-emerald-700' : ''}
+                          ${listing.status === 'pending' ? 'bg-amber-100/60 text-amber-700' : ''}
+                          ${listing.status === 'sold' ? 'bg-gray-100 text-gray-600' : ''}
+                        `}>
+                          {listing.status}
+                        </span>
+                      </td>
+                      <td className="p-4 font-semibold text-gray-900 text-[0.95rem]">${listing.price.toLocaleString()}</td>
+                      <td className="p-4">
+                        <button className="p-2 rounded-lg border-none bg-transparent text-gray-400 cursor-pointer text-xl transition-all hover:bg-gray-100 hover:text-gray-900"><MdMoreHoriz /></button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Side Section: Recent Inquiries */}
+        <div className="flex flex-col gap-8">
+          <div className="bg-white/70 backdrop-blur-md border border-white/60 rounded-[20px] p-6 shadow-sm">
+            <h3 className="text-[1.1rem] font-bold text-gray-900 mb-6">Recent Inquiries</h3>
+            {inquiries.length === 0 ? (
+              <p className="text-gray-500 text-center py-4">No pending inquiries.</p>
+            ) : (
+              <div className="flex flex-col gap-4">
+                {inquiries.map((offer) => (
+                  <div key={offer.id} className="flex flex-col gap-4 p-4 bg-white/50 border border-gray-200/50 rounded-xl">
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center gap-3">
+                         <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold">
+                            {offer.userName?.[0] || 'U'}
+                         </div>
+                        <div>
+                          <p className="font-semibold text-gray-900 m-0 text-[0.95rem]">{offer.userName}</p>
+                          <p className="m-0 text-xs text-gray-500">{offer.listingTitle}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="italic text-gray-600 text-sm bg-gray-50/50 p-3 rounded-lg border border-gray-100">"{offer.message}"</p>
+                    <div className="flex gap-2">
+                      <button 
+                        className="flex-1 py-2 px-3 border-none rounded-lg text-sm font-semibold cursor-pointer flex items-center justify-center gap-1 transition-all bg-emerald-500 text-white hover:bg-emerald-600"
+                        onClick={() => handleAcceptOffer(offer.id)}
+                      >
+                        <MdCheck /> Accept
+                      </button>
+                      <button 
+                        className="flex-1 py-2 px-3 border-none rounded-lg text-sm font-semibold cursor-pointer flex items-center justify-center gap-1 transition-all bg-gray-200/50 text-gray-600 hover:bg-gray-200 hover:text-gray-900"
+                        onClick={() => handleRejectOffer(offer.id)}
+                      >
+                        <MdClose /> Reject
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
+import Link from 'next/link';
+import { 
+  MdApartment, 
+  MdSell, 
+  MdCheckCircle,
+  MdCancel,
+  MdHourglassEmpty
+} from 'react-icons/md';
+import { 
+  collection, 
+  query, 
+  where, 
+  getDocs, 
+  getDoc,
+  doc
+} from 'firebase/firestore';
+import { getFirestoreInstance } from '@/lib/firebase';
+import { useAuth } from '@/lib/auth-store';
+
+interface ServiceItem {
+  id: string;
+  listingId: string;
+  title: string;
+  image: string;
+  type: 'house' | 'car';
+  category: 'rent' | 'sale';
+  status: 'pending' | 'accepted' | 'rejected';
+  amount?: number;
+  createdAt: any;
+}
+
+export default function UserDashboard() {
+  const { user, loading: authLoading } = useAuth();
+
+  const [services, setServices] = useState<ServiceItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [totalSpent, setTotalSpent] = useState(0);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user?.id) {
+        if (!authLoading) setIsLoading(false);
+        return;
+      }
+
+      try {
+        const db = getFirestoreInstance();
+        
+        const inquiriesRef = collection(db, 'inquiries');
+        const q = query(inquiriesRef, where('userId', '==', user.id));
+        
+        const snapshot = await getDocs(q);
+        const items: ServiceItem[] = [];
+        let spent = 0;
+
+        const promises = snapshot.docs.map(async (docSnap) => {
+          const data = docSnap.data();
+          let imageUrl = 'https://via.placeholder.com/300';
+
+          if (data.listingId) {
+            try {
+              const listingSnap = await getDoc(doc(db, 'listings', data.listingId));
+              if (listingSnap.exists()) {
+                const lData = listingSnap.data();
+                if (lData.images?.[0]) imageUrl = lData.images[0];
+              }
+            } catch (e) { /* ignore */ }
+          }
+
+          if (data.status === 'accepted' && data.offerAmount) {
+            spent += Number(data.offerAmount);
+          }
+
+          return {
+            id: docSnap.id,
+            listingId: data.listingId,
+            title: data.listingTitle || 'Listing',
+            image: imageUrl,
+            type: data.listingType || 'house',
+            category: data.listingCategory || 'rent',
+            status: data.status,
+            amount: data.offerAmount || 0,
+            createdAt: data.createdAt
+          } as ServiceItem;
+        });
+
+        const resolvedItems = await Promise.all(promises);
+        
+        resolvedItems.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
+        setServices(resolvedItems);
+        setTotalSpent(spent);
+        setIsLoading(false);
+
+      } catch (error) {
+        console.error("User Dashboard Error:", error);
+        setIsLoading(false);
+      }
+    };
+
+    if (!authLoading) fetchData();
+  }, [user, authLoading]);
+
+  const activeServices = services.filter(s => s.status === 'accepted');
+  
+  if (authLoading || isLoading) return <div className="min-h-screen flex items-center justify-center text-gray-500">Loading...</div>;
+
+  return (
+    <div className="w-full min-h-screen bg-gradient-to-br from-green-50 via-amber-50 to-blue-50 bg-fixed p-4 md:p-8 lg:p-12 lg:pb-16">
+      <header className="flex justify-between items-start mb-10 flex-wrap gap-4">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight m-0">
+            Hello, <span className="bg-gradient-to-br from-emerald-500 to-emerald-700 bg-clip-text text-transparent">{user?.displayName || 'User'}</span>
+          </h1>
+          <p className="text-base text-gray-500 font-medium m-0">
+            You have {activeServices.length} active services.
+          </p>
+        </div>
+      </header>
+
+      {/* Grid Layout: Desktop 2/3 + 1/3 */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        {/* Main Content (Left Column) */}
+        <div className="lg:col-span-2 flex flex-col gap-8">
+          
+          {/* Active Services */}
+          <div className="flex flex-col gap-6">
+            <div className="flex items-center gap-2">
+              <h2 className="text-[1.35rem] font-bold text-gray-900 m-0">Active Services</h2>
+            </div>
+            
+            {activeServices.length === 0 ? (
+              <div className="flex flex-col items-center justify-center p-8 text-center text-gray-500 bg-white/50 border border-dashed border-gray-300 rounded-2xl">
+                <p className="mb-4">No active services.</p>
+                <Link href="/explore" className="px-4 py-2 bg-emerald-100 text-emerald-700 rounded-full font-semibold text-sm hover:bg-emerald-200 transition-colors">
+                  Browse Listings
+                </Link>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-6">
+                {activeServices.map((service) => (
+                  <motion.div 
+                    key={service.id} 
+                    className="relative bg-white/70 backdrop-blur-md border border-white/60 rounded-[20px] overflow-hidden flex flex-col md:flex-row shadow-sm hover:shadow-lg transition-all duration-300"
+                    whileHover={{ y: -5 }}
+                  >
+                    <div className="relative w-full md:w-72 min-h-[200px] md:min-h-auto">
+                      <img src={service.image} alt={service.title} className="w-full h-full object-cover" />
+                      <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-sm text-white px-3 py-1 rounded-lg text-xs font-semibold uppercase tracking-wider">
+                        Active
+                      </div>
+                    </div>
+                    <div className="flex-1 p-6 flex flex-col justify-between gap-6 relative z-10">
+                      <div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-4">{service.title}</h3>
+                        <div className="flex flex-col gap-1 text-sm text-gray-500">
+                          <span className="capitalize">{service.category} • {service.type}</span>
+                        </div>
+                      </div>
+                      <div className="flex gap-3 justify-end">
+                        <button className="px-5 py-2.5 bg-emerald-500 text-white border-none rounded-full font-semibold text-sm cursor-pointer shadow-lg shadow-emerald-500/30 hover:bg-emerald-600 hover:-translate-y-0.5 transition-all">
+                          View Details
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* History */}
+          <div className="flex flex-col gap-6">
+             <div className="flex items-center gap-2">
+                <h2 className="text-[1.35rem] font-bold text-gray-900 m-0">Application History</h2>
+             </div>
+             <div className="flex flex-col gap-3">
+                {services.map((app) => (
+                  <div key={app.id} className="flex items-center gap-4 p-4 bg-white/50 backdrop-blur-md border border-white/60 rounded-2xl transition-all hover:bg-white/80">
+                    <div className="text-xl flex-shrink-0">
+                      {app.status === 'pending' ? <MdHourglassEmpty className="text-amber-500" /> : 
+                       app.status === 'accepted' ? <MdCheckCircle className="text-emerald-500" /> : 
+                       <MdCancel className="text-red-500" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-gray-900 font-semibold text-sm truncate">{app.title}</h4>
+                      <span className="text-gray-500 text-xs block mt-0.5">{new Date(app.createdAt?.seconds * 1000 || Date.now()).toLocaleDateString()}</span>
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide whitespace-nowrap
+                      ${app.status === 'accepted' ? 'bg-emerald-100 text-emerald-700' : ''}
+                      ${app.status === 'pending' ? 'bg-amber-100 text-amber-700' : ''}
+                      ${app.status === 'rejected' ? 'bg-red-100 text-red-700' : ''}
+                    `}>
+                      {app.status}
+                    </span>
+                  </div>
+                ))}
+             </div>
+          </div>
+        </div>
+
+        {/* Sidebar Widgets (Right Column) */}
+        <aside className="flex flex-col gap-8">
+          <div className="flex flex-col gap-4">
+            <h3 className="text-lg font-bold text-gray-900 m-0">Quick Actions</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <Link href="/explore?category=rent&type=house" className="bg-white/60 backdrop-blur-md border border-white/60 rounded-2xl p-6 flex flex-col items-center gap-3 cursor-pointer text-gray-800 no-underline transition-all duration-200 hover:bg-white hover:border-emerald-500 hover:shadow-lg hover:shadow-emerald-500/10">
+                <MdApartment className="text-3xl text-emerald-500" /> 
+                <span className="text-sm font-semibold">Rent Home</span>
+              </Link>
+              <Link href="/explore?category=sale" className="bg-white/60 backdrop-blur-md border border-white/60 rounded-2xl p-6 flex flex-col items-center gap-3 cursor-pointer text-gray-800 no-underline transition-all duration-200 hover:bg-white hover:border-emerald-500 hover:shadow-lg hover:shadow-emerald-500/10">
+                <MdSell className="text-3xl text-emerald-500" /> 
+                <span className="text-sm font-semibold">Buy</span>
+              </Link>
+            </div>
+          </div>
+          
+          <div className="flex flex-col gap-4">
+             <h3 className="text-lg font-bold text-gray-900 m-0">Spending</h3>
+             <div className="bg-white/60 backdrop-blur-md border border-white/60 rounded-2xl p-6 flex flex-col gap-6">
+               <div className="flex justify-between items-baseline">
+                 <span className="text-gray-500 text-sm">Total Spent</span>
+                 <span className="text-xl font-extrabold text-gray-900">${totalSpent.toLocaleString()}</span>
+               </div>
+               {/* Simplified Chart Visual */}
+               <div className="flex justify-between items-end h-[150px] pt-4 gap-2">
+                  <div className="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+                    <div className="w-full h-full bg-black/5 rounded-lg flex items-end overflow-hidden">
+                      <div className="w-full bg-emerald-500/30 rounded-t-lg h-[40%]"></div>
+                    </div>
+                    <span className="text-xs font-semibold text-gray-400">Prev</span>
+                  </div>
+                  <div className="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+                    <div className="w-full h-full bg-black/5 rounded-lg flex items-end overflow-hidden">
+                      <div className="w-full bg-emerald-500 rounded-t-lg h-[75%] shadow-[0_0_10px_rgba(16,185,129,0.4)]"></div>
+                    </div>
+                    <span className="text-xs font-semibold text-emerald-600">This Month</span>
+                  </div>
+               </div>
+               <button className="w-full py-3 bg-transparent border border-emerald-500 text-emerald-500 rounded-full font-semibold text-sm cursor-pointer flex items-center justify-center gap-2 transition-all hover:bg-emerald-500 hover:text-white">
+                 View Report
+               </button>
+             </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
+import Navbar from '@/components/layout/navbar/navbar';
+import CategoryDropdown from './category-dropdown';
+import { 
+  MdSearch, 
+  MdFilterList, 
+  MdFavoriteBorder, 
+  MdDirectionsCar, 
+  MdHome, 
+  MdBed, 
+  MdBathtub, 
+  MdAspectRatio,
+  MdCalendarToday,
+  MdArrowForward
+} from 'react-icons/md';
+import { useAuth } from '@/lib/auth-store';
+import { useToast } from '@/components/toast/toast';
+import { advancedSearchListings, Listing } from '@/lib/firestore-service';
+import { useInquiryNotification } from '@/lib/notification-hooks';
+
+// Types based on Firestore schema
+interface SearchFilters {
+  query: string;
+  type?: 'house' | 'car';
+  category?: 'rent' | 'sale';
+  priceMin?: number;
+  priceMax?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+}
+
+interface SearchResult extends Listing {
+  relevance?: number;
+}
+
+export default function ExplorePage() {
+  const { user } = useAuth();
+  const toast = useToast();
+  const router = useRouter();
+  
+  useInquiryNotification();
+
+  // State
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  
+  // Search Suggestions
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // Filters
+  const [filters, setFilters] = useState<SearchFilters>({
+    query: '',
+    type: undefined,
+    category: undefined,
+    priceMin: undefined,
+    priceMax: undefined,
+  });
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      performSearch();
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [filters]);
+
+  const performSearch = async () => {
+    try {
+      setLoading(true);
+      const searchResults = await advancedSearchListings(filters.query, filters);
+      setResults(searchResults);
+      
+      if (filters.query) {
+        const uniqueTitles = Array.from(new Set(searchResults.map(r => r.title)));
+        setSuggestions(uniqueTitles.slice(0, 5));
+      }
+    } catch (error) {
+      console.error('Error searching:', error);
+      toast.error('Search failed', 'Could not retrieve listings.');
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFilters(prev => ({ ...prev, query: value }));
+    setShowSuggestions(value.length > 0);
+  };
+
+  const handleFilterChange = (key: keyof SearchFilters, value: any) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleClearFilters = () => {
+    setFilters({
+      query: '',
+      type: undefined,
+      category: undefined,
+      priceMin: undefined,
+      priceMax: undefined,
+    });
+    setResults([]);
+    setSuggestions([]);
+  };
+
+  const handleViewProduct = (listing: Listing) => {
+    router.push(`/explore/${listing.id}`);
+  };
+
+  return (
+    <>
+      <Navbar />
+      <div className="w-full min-h-screen p-4 md:p-8 pt-[100px] bg-gradient-to-br from-white to-gray-100 text-gray-900 font-sans">
+      
+      {/* Header */}
+      <div className="mb-10 text-center max-w-3xl mx-auto">
+        <h1 className="text-4xl md:text-5xl font-extrabold bg-gradient-to-br from-gray-900 to-gray-600 bg-clip-text text-transparent mb-2 tracking-tight">
+          Explore Havanah
+        </h1>
+        <p className="text-lg text-slate-500 font-medium">Find your dream home or perfect drive.</p>
+      </div>
+
+      {/* Sticky Filter Bar */}
+      <motion.div 
+        className="sticky top-6 z-50 max-w-5xl mx-auto mb-12 bg-white/80 backdrop-blur-xl border border-white/40 rounded-3xl p-3 shadow-lg shadow-black/5 transition-shadow hover:shadow-xl hover:shadow-black/10"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+      >
+        <div className="flex flex-col md:flex-row items-center gap-4">
+          <div className="flex-1 flex items-center bg-slate-100/60 rounded-2xl p-1 min-w-[280px] w-full border border-transparent focus-within:bg-white focus-within:border-sky-200 focus-within:ring-4 focus-within:ring-sky-200/15 transition-all">
+            <div className="px-3 text-slate-400 flex items-center justify-center">
+              <MdSearch className="text-xl" />
+            </div>
+            <input
+              type="text"
+              placeholder="Search apartments, cars, models..."
+              value={filters.query}
+              onChange={handleQueryChange}
+              onFocus={() => setShowSuggestions(true)}
+              className="flex-1 border-none bg-transparent py-3 text-base text-slate-800 outline-none placeholder:text-slate-400 w-full"
+            />
+          </div>
+          
+          {/* Quick Filter Toggles */}
+          <div className="flex gap-2 items-center w-full md:w-auto overflow-x-auto no-scrollbar pb-1 md:pb-0">
+            <button 
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-full border text-sm font-semibold cursor-pointer transition-all whitespace-nowrap
+                ${filters.type === 'house' 
+                  ? 'bg-slate-800 text-white border-slate-800 hover:bg-slate-900' 
+                  : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}
+              onClick={() => handleFilterChange('type', filters.type === 'house' ? undefined : 'house')}
+            >
+              <MdHome /> Homes
+            </button>
+            <button 
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-full border text-sm font-semibold cursor-pointer transition-all whitespace-nowrap
+                ${filters.type === 'car' 
+                  ? 'bg-slate-800 text-white border-slate-800 hover:bg-slate-900' 
+                  : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}
+              onClick={() => handleFilterChange('type', filters.type === 'car' ? undefined : 'car')}
+            >
+              <MdDirectionsCar /> Cars
+            </button>
+            
+            <button 
+              className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-slate-200 bg-white text-slate-500 text-sm font-semibold cursor-pointer transition-all whitespace-nowrap hover:bg-slate-50"
+              onClick={() => setIsFilterOpen(!isFilterOpen)}
+            >
+              <MdFilterList /> Filters
+            </button>
+
+            {Object.values(filters).some(v => v !== undefined && v !== '') && (
+              <button className="px-5 py-2.5 rounded-full bg-transparent text-red-500 font-semibold text-sm border-none cursor-pointer hover:underline whitespace-nowrap" onClick={handleClearFilters}>
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Suggestions Dropdown */}
+        <AnimatePresence>
+          {showSuggestions && suggestions.length > 0 && (
+            <motion.div
+              className="absolute top-full left-5 right-5 bg-white/95 backdrop-blur-xl rounded-b-2xl shadow-xl border border-white/50 border-t-0 overflow-hidden z-40 mt-1"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+            >
+              {suggestions.map((suggestion, idx) => (
+                <button
+                  key={idx}
+                  className="w-full text-left px-6 py-3 bg-transparent border-none cursor-pointer flex items-center text-slate-600 text-sm hover:bg-sky-50 hover:text-slate-900 transition-colors"
+                  onClick={() => {
+                    handleFilterChange('query', suggestion);
+                    setShowSuggestions(false);
+                  }}
+                >
+                  <MdSearch className="mr-2 text-sky-300" />
+                  {suggestion}
+                </button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Expanded Filters Area */}
+        <AnimatePresence>
+          {isFilterOpen && (
+            <motion.div 
+              className="overflow-hidden border-t border-black/5 mt-2"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+            >
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 pb-2">
+                <div className="flex flex-col gap-1.5">
+                  <CategoryDropdown
+                    value={filters.category || ''}
+                    onChange={(value) => handleFilterChange('category', value || undefined)}
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold uppercase text-slate-400 tracking-wider">Min Price</label>
+                  <input 
+                    type="number" 
+                    placeholder="0" 
+                    className="p-2.5 rounded-xl border border-slate-200 bg-white text-slate-800 text-sm outline-none focus:border-sky-300 transition-colors"
+                    value={filters.priceMin || ''}
+                    onChange={e => handleFilterChange('priceMin', Number(e.target.value) || undefined)}
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold uppercase text-slate-400 tracking-wider">Max Price</label>
+                  <input 
+                    type="number" 
+                    placeholder="Any" 
+                    className="p-2.5 rounded-xl border border-slate-200 bg-white text-slate-800 text-sm outline-none focus:border-sky-300 transition-colors"
+                    value={filters.priceMax || ''}
+                    onChange={e => handleFilterChange('priceMax', Number(e.target.value) || undefined)}
+                  />
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+
+      {/* Section Header */}
+      <div className="mb-6 px-2">
+        <h2 className="text-2xl font-bold text-slate-800">
+          {loading ? 'Searching...' : `${results.length} Results Found`}
+        </h2>
+      </div>
+
+      {/* Results Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 pb-16">
+        {loading ? (
+           // Simple Loading State
+           Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="bg-white rounded-3xl overflow-hidden border border-white/80 shadow-sm animate-pulse">
+              <div className="pt-[65%] bg-slate-200"></div>
+              <div className="p-6 flex flex-col gap-2">
+                <div className="h-5 bg-slate-200 rounded w-3/4"></div>
+                <div className="h-4 bg-slate-100 rounded w-1/2"></div>
+              </div>
+            </div>
+          ))
+        ) : results.length === 0 ? (
+          <motion.div
+            className="col-span-full flex flex-col items-center justify-center py-16 text-center text-slate-500 bg-white/50 rounded-3xl border border-dashed border-slate-300"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            <MdSearch size={48} className="mb-4 opacity-50" />
+            <p>No listings found matching your criteria.</p>
+            <button className="mt-4 text-red-500 font-semibold hover:underline bg-transparent border-none cursor-pointer" onClick={handleClearFilters}>
+              Clear all filters
+            </button>
+          </motion.div>
+        ) : (
+          results.map((listing, index) => (
+            <motion.div
+              key={listing.id}
+              className="bg-white rounded-3xl overflow-hidden border border-white/80 shadow-sm transition-all duration-300 hover:-translate-y-2 hover:shadow-xl group flex flex-col relative"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+            >
+              <div className="relative pt-[65%] bg-slate-100 overflow-hidden">
+                {listing.images?.[0] ? (
+                  <div 
+                    className="absolute top-0 left-0 w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-110"
+                    style={{ backgroundImage: `url(${listing.images[0]})` }}
+                  />
+                ) : (
+                  <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-slate-200 to-slate-100" />
+                )}
+                
+                <button className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/70 backdrop-blur-sm border-none flex items-center justify-center cursor-pointer text-slate-800 transition-all hover:bg-white hover:scale-110 hover:text-red-500 z-10">
+                  <MdFavoriteBorder className="text-xl" />
+                </button>
+
+                <div className="absolute bottom-4 left-4 flex gap-2 z-10">
+                  <span className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold bg-white/90 backdrop-blur-sm text-slate-800 shadow-sm">
+                    {listing.type === 'car' ? <MdDirectionsCar /> : <MdHome />}
+                    {listing.type === 'car' ? 'Car' : 'Home'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-6 flex-1 flex flex-col justify-between">
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900 mb-1 leading-snug">{listing.title}</h3>
+                  <p className="text-sm text-slate-500 mb-4">{listing.location || 'Location available on request'}</p>
+
+                  <div className="flex flex-wrap gap-4 mb-6">
+                    {listing.type === 'house' && (
+                      <>
+                        {listing.bedrooms && (
+                          <span className="flex items-center gap-1.5 text-sm text-slate-600 font-medium">
+                            <MdBed className="text-slate-400 text-lg" /> {listing.bedrooms}
+                          </span>
+                        )}
+                        {listing.bathrooms && (
+                          <span className="flex items-center gap-1.5 text-sm text-slate-600 font-medium">
+                            <MdBathtub className="text-slate-400 text-lg" /> {listing.bathrooms}
+                          </span>
+                        )}
+                        {listing.squareFeet && (
+                          <span className="flex items-center gap-1.5 text-sm text-slate-600 font-medium">
+                            <MdAspectRatio className="text-slate-400 text-lg" /> {listing.squareFeet}sqft
+                          </span>
+                        )}
+                      </>
+                    )}
+                    {listing.type === 'car' && (
+                      <>
+                        {listing.year && (
+                          <span className="flex items-center gap-1.5 text-sm text-slate-600 font-medium">
+                            <MdCalendarToday className="text-slate-400 text-lg" /> {listing.year}
+                          </span>
+                        )}
+                        {listing.brand && (
+                          <span className="flex items-center gap-1.5 text-sm text-slate-600 font-medium">
+                            {listing.brand}
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-4 border-t border-slate-100 mt-auto">
+                  <div className="flex flex-col">
+                    <span className="text-xl font-bold text-slate-900">${listing.price.toLocaleString()}</span>
+                    {listing.category === 'rent' && <span className="text-xs text-slate-500 font-medium">/mo</span>}
+                  </div>
+                  
+                  <motion.button
+                    className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-full border-none font-semibold text-sm cursor-pointer transition-all hover:bg-slate-700 hover:gap-3"
+                    onClick={() => handleViewProduct(listing)}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    View <MdArrowForward />
+                  </motion.button>
+                </div>
+              </div>
+            </motion.div>
+          ))
+        )}
+      </div>
+
+      </div>
+    </>
+  );
+}
+
+
+'use client';
+
+import React, { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/auth-store';
+import { useToast } from '@/components/toast/toast';
+import { FaGoogle, FaBuilding, FaCarSide, FaComments, FaShieldAlt, FaArrowRight } from 'react-icons/fa';
+import { motion, useMotionValue, useTransform } from 'framer-motion';
+
+export default function LoginPage() {
+  const router = useRouter();
+  const { login, loginWithGoogle, loading, error } = useAuth();
+  const toast = useToast();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  // 3D Tilt Logic
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const rotateX = useTransform(y, [-100, 100], [5, -5]);
+  const rotateY = useTransform(x, [-100, 100], [-5, 5]);
+
+  const handleMouseMove = (event: React.MouseEvent) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    x.set(event.clientX - rect.left - rect.width / 2);
+    y.set(event.clientY - rect.top - rect.height / 2);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) {
+      toast.warning('Incomplete Form', 'Please fill in all fields');
+      return;
+    }
+    try {
+      const loadingId = toast.loading('Logging in', 'Verifying your credentials...');
+      await login(email, password);
+      toast.remove(loadingId);
+      toast.success('Welcome Back!', 'Login successful. Redirecting...');
+      setTimeout(() => router.push('/explore'), 1000);
+    } catch (err) {
+      toast.error('Login Failed', 'Invalid email or password.');
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      const loadingId = toast.loading('Signing in with Google', 'Please wait...');
+      await loginWithGoogle('user');
+      toast.remove(loadingId);
+      toast.success('Welcome!', 'Redirecting...');
+      setTimeout(() => router.push('/explore'), 1000);
+    } catch (err) {
+      toast.error('Login Failed', 'Unable to sign in with Google.');
+    }
+  };
+
+  // Animation Variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { 
+      opacity: 1, 
+      transition: { staggerChildren: 0.15, delayChildren: 0.2 } 
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: { y: 0, opacity: 1, transition: { type: 'spring', stiffness: 100 } }
+  };
+
+  return (
+    <div className="flex flex-col lg:flex-row min-h-screen bg-slate-50 relative overflow-hidden font-sans">
+      {/* Background Shapes */}
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+        <motion.div 
+          animate={{ y: [0, -20, 0], rotate: [0, 5, 0] }} 
+          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute -top-[10%] -right-[5%] w-[400px] h-[400px] rounded-full blur-[27px] bg-[radial-gradient(circle,rgba(16,185,129,0.15)_0%,transparent_70%)]" 
+        />
+        <motion.div 
+          animate={{ y: [0, 30, 0], rotate: [0, -5, 0] }} 
+          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute -bottom-[10%] -left-[10%] w-[335px] h-[335px] rounded-full blur-[27px] bg-[radial-gradient(circle,rgba(5,150,105,0.1)_0%,transparent_70%)]" 
+        />
+      </div>
+
+      {/* Left Panel - Branding */}
+      <motion.div 
+        className="flex-1 flex flex-col justify-center items-center lg:items-start text-center lg:text-left p-8 lg:p-16 bg-white/80 backdrop-blur-md z-10 relative"
+        initial={{ opacity: 0, x: -50 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.8 }}
+      >
+        <div className="w-full max-w-[335px]">
+          <div className="mb-6 flex justify-center lg:justify-start">
+            <img src="/logo.jpg" alt="Havanah" className="h-10 object-contain" />
+          </div>
+          <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight mb-3 bg-gradient-to-br from-gray-900 to-emerald-500 bg-clip-text text-transparent">
+            Havanah
+          </h1>
+          <p className="text-sm text-gray-500 leading-relaxed mb-8">
+            Experience the future of premium real estate and vehicle rentals.
+          </p>
+
+          <div className="hidden lg:grid grid-cols-2 gap-5">
+            {[
+              { icon: <FaBuilding />, text: "Premium Properties" },
+              { icon: <FaCarSide />, text: "Luxury Vehicles" },
+              { icon: <FaComments />, text: "Instant Agent Chat" },
+              { icon: <FaShieldAlt />, text: "Secure Transactions" },
+            ].map((feature, index) => (
+              <motion.div 
+                key={index}
+                className="flex items-center gap-3"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.5 + (index * 0.1) }}
+              >
+                <span className="flex items-center justify-center w-8 h-8 bg-emerald-500/10 rounded-lg text-emerald-500 text-sm">
+                  {feature.icon}
+                </span>
+                <p className="font-semibold text-gray-700 text-xs">{feature.text}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Right Panel - 3D Form */}
+      <div 
+        className="flex-1 flex items-center justify-center p-6 z-10 perspective-[670px]" 
+        onMouseMove={handleMouseMove} 
+        onMouseLeave={() => { x.set(0); y.set(0); }}
+      >
+        <motion.div 
+          className="w-full max-w-[302px] p-8 bg-white/70 backdrop-blur-xl border border-white/50 rounded-2xl shadow-[0_17px_34px_-8px_rgba(0,0,0,0.05),0_0_0_1px_rgba(255,255,255,0.5)_inset] transform-style-3d"
+          style={{ rotateX, rotateY, z: 100 }}
+          initial="hidden"
+          animate="visible"
+          variants={containerVariants}
+        >
+          <motion.div variants={itemVariants}>
+            <h2 className="text-xl font-bold text-gray-900 mb-1">Welcome Back</h2>
+            <p className="text-gray-500 text-[0.67rem] mb-5">Please enter your details.</p>
+          </motion.div>
+
+          <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+            {error && (
+              <motion.div variants={itemVariants} className="bg-red-50 border border-red-200 text-red-500 p-2 rounded text-[0.59rem] text-center">
+                {error}
+              </motion.div>
+            )}
+
+            <motion.div variants={itemVariants} className="flex flex-col gap-1">
+              <label htmlFor="email" className="block text-[0.59rem] font-semibold text-gray-700">Email</label>
+              <input
+                id="email"
+                type="email"
+                className="w-full px-2.5 py-2 bg-white/80 border border-gray-200 rounded-lg text-[0.67rem] transition-all duration-200 outline-none focus:border-emerald-500 focus:bg-white focus:ring-[2.5px] focus:ring-emerald-500/10"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
+              />
+            </motion.div>
+
+            <motion.div variants={itemVariants} className="flex flex-col gap-1">
+              <label htmlFor="password" className="block text-[0.59rem] font-semibold text-gray-700">Password</label>
+              <input
+                id="password"
+                type="password"
+                className="w-full px-2.5 py-2 bg-white/80 border border-gray-200 rounded-lg text-[0.67rem] transition-all duration-200 outline-none focus:border-emerald-500 focus:bg-white focus:ring-[2.5px] focus:ring-emerald-500/10"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+              />
+            </motion.div>
+
+            <motion.div variants={itemVariants} className="flex justify-between items-center text-[0.59rem]">
+              <div className="flex items-center gap-1.5 text-gray-600">
+                <input 
+                  id="remember" 
+                  type="checkbox" 
+                  className="w-[11px] h-[11px] accent-emerald-500 cursor-pointer" 
+                />
+                <label htmlFor="remember">Remember me</label>
+              </div>
+              <Link href="/auth/forgot-password" className="text-emerald-500 font-semibold hover:underline">
+                Forgot password?
+              </Link>
+            </motion.div>
+
+            <motion.button
+              variants={itemVariants}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              type="submit"
+              className="flex items-center justify-center gap-1.5 w-full p-2.5 mt-1 bg-emerald-500 text-white rounded-lg font-semibold text-[0.67rem] shadow-[0_3px_4px_-1px_rgba(16,185,129,0.2)] disabled:opacity-70 disabled:cursor-not-allowed"
+              disabled={loading}
+            >
+              {loading ? 'Signing In...' : <>Sign In <FaArrowRight /></>}
+            </motion.button>
+          </form>
+
+          <motion.div variants={itemVariants} className="flex items-center text-center text-gray-400 text-[0.59rem] my-4 before:flex-1 before:border-b before:border-gray-200 after:flex-1 after:border-b after:border-gray-200">
+            <span className="px-2">or</span>
+          </motion.div>
+
+          <motion.button
+            variants={itemVariants}
+            whileHover={{ scale: 1.02, backgroundColor: "#f8fafc" }}
+            whileTap={{ scale: 0.98 }}
+            type="button"
+            className="flex items-center justify-center gap-2 w-full p-2.5 bg-white border border-gray-200 rounded-lg text-gray-800 font-medium text-[0.67rem] transition-colors"
+            onClick={handleGoogleLogin}
+            disabled={loading}
+          >
+            <FaGoogle className="text-base" />
+            Sign in with Google
+          </motion.button>
+
+          <motion.p variants={itemVariants} className="text-center text-[0.59rem] text-gray-500 mt-4">
+            Don't have an account? <Link href="/auth/signup" className="text-emerald-500 font-semibold hover:underline">Sign up</Link>
+          </motion.p>
+          
+          <motion.p variants={itemVariants} className="text-center text-[0.59rem] text-gray-400 mt-1">
+            Agent Access: <Link href="/auth/agent-login" className="text-emerald-500 font-semibold hover:underline">Log in here</Link>
+          </motion.p>
+        </motion.div>
+      </div>
+    </div>
+  );
+}
+
+
+'use client';
+
+import React, { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/auth-store';
+import { useToast } from '@/components/toast/toast';
+import { FaGoogle, FaArrowLeft, FaUser, FaBriefcase, FaCheck } from 'react-icons/fa';
+import { motion } from 'framer-motion';
+
+export default function SignupPage() {
+  const router = useRouter();
+  const { register, loginWithGoogle, error, loading } = useAuth();
+  const toast = useToast();
+  const [userType, setUserType] = useState<'user' | 'agent'>('user');
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    confirmPassword: '',
+    fullName: '',
+    phoneNumber: '',
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (formData.password !== formData.confirmPassword) {
+      toast.error('Error', 'Passwords do not match');
+      return;
+    }
+    try {
+      const loadingId = toast.loading('Creating Account', 'Setting up your profile...');
+      await register(formData.email, formData.password, userType, formData.fullName, formData.phoneNumber);
+      toast.remove(loadingId);
+      toast.success('Account Created!', 'Welcome to Havanah!');
+      setTimeout(() => router.push(userType === 'agent' ? '/agent/dashboard' : '/explore'), 1000);
+    } catch (err) {
+      toast.error('Registration Failed', error || 'Please try again.');
+    }
+  };
+
+  const handleGoogleSignup = async () => {
+    try {
+      const loadingId = toast.loading('Google Signup', 'Please wait...');
+      await loginWithGoogle(userType);
+      toast.remove(loadingId);
+      toast.success('Success!', 'Redirecting...');
+      setTimeout(() => router.push('/explore'), 1000);
+    } catch (err) {
+      toast.error('Failed', 'Google signup failed.');
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-green-50 relative overflow-hidden p-5 font-sans">
+      {/* Animated Background Blobs */}
+      <motion.div 
+        className="absolute -top-[10%] -left-[10%] w-[400px] h-[400px] bg-gradient-to-b from-emerald-500/20 to-transparent blur-[40px] z-0 rounded-[40%_60%_70%_30%/40%_50%_60%_50%]"
+        animate={{ scale: [1, 1.2, 1], rotate: [0, 90, 0] }}
+        transition={{ duration: 20, repeat: Infinity }}
+      />
+      <motion.div 
+        className="absolute -bottom-[20%] -right-[10%] w-[335px] h-[335px] bg-gradient-to-b from-amber-400/15 to-transparent blur-[40px] z-0 rounded-[60%_40%_30%_70%/60%_30%_70%_40%]"
+        animate={{ scale: [1, 1.1, 1], rotate: [0, -60, 0] }}
+        transition={{ duration: 15, repeat: Infinity }}
+      />
+
+      <motion.div 
+        className="relative z-10 w-full max-w-[368px] bg-white/75 backdrop-blur-2xl border border-white/80 rounded-[19px] p-6 shadow-[0_13px_27px_rgba(0,0,0,0.04),0_1px_2px_rgba(0,0,0,0.05)]"
+        initial={{ opacity: 0, y: 50 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+      >
+        <div className="text-center mb-5">
+          <Link href="/" className="inline-flex items-center gap-1.5 text-gray-500 text-[0.58rem] mb-4 hover:text-emerald-500 transition-colors">
+            <FaArrowLeft /> Back to Home
+          </Link>
+          <h2 className="text-xl font-extrabold text-gray-800 mb-1">Create Account</h2>
+          <p className="text-gray-500 text-[0.67rem]">Join our premium community today</p>
+        </div>
+
+        {/* Custom Switcher */}
+        <div className="flex justify-center mb-5">
+          <div className="relative flex w-full bg-gray-100 p-[0.17rem] rounded-[11px]">
+            <motion.div 
+              className="absolute top-[0.17rem] left-[0.17rem] w-[calc(50%-0.17rem)] h-[calc(100%-0.34rem)] bg-white rounded-lg shadow-sm z-10"
+              initial={false}
+              animate={{ x: userType === 'user' ? 0 : '100%' }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            />
+            <button 
+              type="button"
+              className={`flex-1 relative z-20 flex items-center justify-center gap-1.5 p-2 font-semibold text-[0.67rem] transition-colors duration-300 ${userType === 'user' ? 'text-emerald-500' : 'text-gray-500'}`}
+              onClick={() => setUserType('user')}
+            >
+              <FaUser className="text-[0.74rem]" /> User
+            </button>
+            <button 
+              type="button"
+              className={`flex-1 relative z-20 flex items-center justify-center gap-1.5 p-2 font-semibold text-[0.67rem] transition-colors duration-300 ${userType === 'agent' ? 'text-emerald-500' : 'text-gray-500'}`}
+              onClick={() => setUserType('agent')}
+            >
+              <FaBriefcase className="text-[0.74rem]" /> Agent
+            </button>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          {error && <div className="bg-red-50 text-red-700 p-2 rounded text-[0.59rem] text-center border border-red-100">{error}</div>}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div className="flex flex-col gap-1">
+              <label className="text-[0.5rem] font-bold uppercase text-gray-500 tracking-wider">Full Name</label>
+              <input 
+                name="fullName" 
+                type="text" 
+                placeholder="John Doe" 
+                required 
+                onChange={handleChange} 
+                className="w-full p-2.5 rounded-lg border border-gray-200 bg-white/60 text-[0.64rem] transition-all focus:bg-white focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/15" 
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[0.5rem] font-bold uppercase text-gray-500 tracking-wider">Phone</label>
+              <input 
+                name="phoneNumber" 
+                type="tel" 
+                placeholder="(555) 123-4567" 
+                onChange={handleChange} 
+                className="w-full p-2.5 rounded-lg border border-gray-200 bg-white/60 text-[0.64rem] transition-all focus:bg-white focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/15" 
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-[0.5rem] font-bold uppercase text-gray-500 tracking-wider">Email Address</label>
+            <input 
+              name="email" 
+              type="email" 
+              placeholder="you@example.com" 
+              required 
+              onChange={handleChange} 
+              className="w-full p-2.5 rounded-lg border border-gray-200 bg-white/60 text-[0.64rem] transition-all focus:bg-white focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/15" 
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div className="flex flex-col gap-1">
+              <label className="text-[0.5rem] font-bold uppercase text-gray-500 tracking-wider">Password</label>
+              <input 
+                name="password" 
+                type="password" 
+                placeholder="••••••••" 
+                required 
+                onChange={handleChange} 
+                className="w-full p-2.5 rounded-lg border border-gray-200 bg-white/60 text-[0.64rem] transition-all focus:bg-white focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/15" 
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[0.5rem] font-bold uppercase text-gray-500 tracking-wider">Confirm</label>
+              <input 
+                name="confirmPassword" 
+                type="password" 
+                placeholder="••••••••" 
+                required 
+                onChange={handleChange} 
+                className="w-full p-2.5 rounded-lg border border-gray-200 bg-white/60 text-[0.64rem] transition-all focus:bg-white focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/15" 
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 text-[0.59rem] text-gray-600 my-1">
+             <div className="relative w-[13px] h-[13px]">
+                <input 
+                  id="terms" 
+                  type="checkbox" 
+                  required 
+                  className="peer appearance-none w-full h-full border-[2px] border-gray-300 rounded-[4px] checked:bg-emerald-500 checked:border-emerald-500 cursor-pointer transition-all" 
+                />
+                <FaCheck className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white text-[0.47rem] pointer-events-none opacity-0 peer-checked:opacity-100" />
+             </div>
+             <label htmlFor="terms">I accept the <a href="#" className="text-emerald-500 font-semibold hover:underline">Terms</a> & <a href="#" className="text-emerald-500 font-semibold hover:underline">Privacy Policy</a></label>
+          </div>
+
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="w-full p-2.5 bg-gradient-to-br from-emerald-500 to-emerald-700 text-white rounded-lg text-[0.67rem] font-semibold shadow-[0_3px_8px_rgba(16,185,129,0.3)] disabled:opacity-70 disabled:cursor-not-allowed"
+            disabled={loading}
+            type="submit"
+          >
+            {loading ? 'Creating Profile...' : 'Create Account'}
+          </motion.button>
+        </form>
+
+        <div className="flex items-center text-center text-gray-400 text-[0.59rem] my-4 before:flex-1 before:border-b before:border-gray-200 after:flex-1 after:border-b after:border-gray-200">
+          <span className="px-2">Or continue with</span>
+        </div>
+
+        <motion.button
+          type="button"
+          className="flex items-center justify-center gap-2 w-full p-2.5 bg-white border border-gray-200 rounded-lg font-semibold text-[0.67rem] text-gray-700 hover:border-gray-300 transition-colors"
+          whileHover={{ y: -2 }}
+          onClick={handleGoogleSignup}
+        >
+          <FaGoogle /> Google
+        </motion.button>
+
+        <p className="text-center mt-4 text-[0.59rem] text-gray-500">
+          Already a member? <Link href="/auth/login" className="text-emerald-500 font-bold hover:underline">Log in</Link>
+        </p>
+      </motion.div>
+    </div>
+  );
+}
+
+
+'use client';
+
+import React, { useState, createContext, useContext, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  MdCheckCircle, MdError, MdInfo, MdWarning, MdClose, MdLoop
+} from 'react-icons/md';
+
+// --- Types ---
+export type ToastType = 'success' | 'error' | 'warning' | 'info' | 'loading';
+
+export interface ToastMessage {
+  id: string;
+  type: ToastType;
+  title: string;
+  message?: string;
+  duration?: number;
+  action?: {
+    label: string;
+    onClick: () => void;
+  };
+}
+
+interface ToastContextType {
+  toasts: ToastMessage[];
+  addToast: (toast: Omit<ToastMessage, 'id'>) => string;
+  removeToast: (id: string) => void;
+  clearAll: () => void;
+}
+
+const ToastContext = createContext<ToastContextType | undefined>(undefined);
+
+// --- Styles Helper ---
+const getToastStyles = (type: ToastType) => {
+  switch (type) {
+    case 'success': return 'border-emerald-500/30 bg-emerald-50/90 text-emerald-600';
+    case 'error': return 'border-red-500/30 bg-red-50/90 text-red-600';
+    case 'warning': return 'border-amber-500/30 bg-amber-50/90 text-amber-600';
+    case 'loading': return 'border-blue-500/30 bg-blue-50/90 text-blue-600';
+    default: return 'border-blue-500/30 bg-blue-50/90 text-blue-600';
+  }
+};
+
+const getIconStyles = (type: ToastType) => {
+  switch (type) {
+    case 'success': return 'text-emerald-500 bg-emerald-100';
+    case 'error': return 'text-red-500 bg-red-100';
+    case 'warning': return 'text-amber-500 bg-amber-100';
+    default: return 'text-blue-500 bg-blue-100';
+  }
+};
+
+// 1. Toast Icon Helper
+const ToastIcon = ({ type }: { type: ToastType }) => {
+  const baseClass = "flex items-center justify-center w-10 h-10 min-w-[40px] rounded-xl text-2xl backdrop-blur-sm border border-white/60 shadow-sm";
+  const colorClass = getIconStyles(type);
+
+  switch (type) {
+    case 'success': return <div className={`${baseClass} ${colorClass}`}><MdCheckCircle /></div>;
+    case 'error': return <div className={`${baseClass} ${colorClass}`}><MdError /></div>;
+    case 'warning': return <div className={`${baseClass} ${colorClass}`}><MdWarning /></div>;
+    case 'loading': return <div className={`${baseClass} ${colorClass}`}><MdLoop className="animate-spin" /></div>;
+    default: return <div className={`${baseClass} ${colorClass}`}><MdInfo /></div>;
+  }
+};
+
+// 2. Individual Toast Item
+const ToastItem = ({ toast, onRemove }: { toast: ToastMessage; onRemove: (id: string) => void; }) => {
+  useEffect(() => {
+    if (toast.duration && toast.duration > 0 && toast.type !== 'loading') {
+      const timer = setTimeout(() => onRemove(toast.id), toast.duration);
+      return () => clearTimeout(timer);
+    }
+  }, [toast, onRemove]);
+
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: -50, scale: 0.9 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
+      className={`relative flex items-start gap-4 p-4 min-w-[320px] max-w-md rounded-2xl border backdrop-blur-xl shadow-lg overflow-hidden ${getToastStyles(toast.type)}`}
+    >
+      {/* Icon */}
+      <div className="z-10 mt-1">
+        <ToastIcon type={toast.type} />
+      </div>
+      
+      {/* Content */}
+      <div className="flex-1 flex flex-col gap-1 z-10">
+        <h4 className="font-bold text-sm text-gray-900 leading-tight">{toast.title}</h4>
+        {toast.message && <p className="text-xs text-gray-600 leading-relaxed">{toast.message}</p>}
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-start gap-2 z-10 pl-2">
+        {toast.action && (
+          <button 
+            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-transform hover:-translate-y-0.5 active:translate-y-0 shadow-md whitespace-nowrap"
+            onClick={(e) => { e.stopPropagation(); toast.action?.onClick(); onRemove(toast.id); }}
+          >
+            {toast.action.label}
+          </button>
+        )}
+        <button 
+          className="p-1 text-gray-400 hover:text-gray-800 hover:bg-black/5 rounded-md transition-colors"
+          onClick={() => onRemove(toast.id)}
+        >
+          <MdClose size={18} />
+        </button>
+      </div>
+
+      {/* Progress Bar */}
+      {toast.duration && toast.duration > 0 && toast.type !== 'loading' && (
+        <motion.div 
+          className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-emerald-400 to-amber-400"
+          initial={{ width: '100%' }}
+          animate={{ width: '0%' }}
+          transition={{ duration: toast.duration / 1000, ease: 'linear' }}
+        />
+      )}
+    </motion.div>
+  );
+};
+
+// 3. Toast Container
+const ToastContainer = ({ toasts, removeToast }: { toasts: ToastMessage[], removeToast: (id: string) => void }) => {
+  return (
+    <div className="fixed top-8 right-4 sm:right-8 z-[9999] flex flex-col gap-3 pointer-events-none w-full max-w-[420px]">
+      <AnimatePresence mode="popLayout">
+        {toasts.map((toast) => (
+          <div key={toast.id} className="pointer-events-auto flex justify-end">
+             <ToastItem toast={toast} onRemove={removeToast} />
+          </div>
+        ))}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+// --- Provider ---
+export function ToastProvider({ children }: { children: React.ReactNode }) {
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  const addToast = useCallback((toast: Omit<ToastMessage, 'id'>) => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setToasts((prev) => [...prev, { ...toast, id, duration: toast.duration ?? 5000 }]);
+    return id;
+  }, []);
+
+  const clearAll = useCallback(() => setToasts([]), []);
+
+  return (
+    <ToastContext.Provider value={{ toasts, addToast, removeToast, clearAll }}>
+      {children}
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
+    </ToastContext.Provider>
+  );
+}
+
+// --- Hook ---
+export function useToast() {
+  const context = useContext(ToastContext);
+  if (!context) throw new Error('useToast must be used within a ToastProvider');
+  const { addToast, removeToast, clearAll } = context;
+  return {
+    success: (title: string, message?: string, duration?: number) => addToast({ type: 'success', title, message, duration }),
+    error: (title: string, message?: string, duration?: number) => addToast({ type: 'error', title, message, duration }),
+    warning: (title: string, message?: string, duration?: number) => addToast({ type: 'warning', title, message, duration }),
+    info: (title: string, message?: string, duration?: number) => addToast({ type: 'info', title, message, duration }),
+    loading: (title: string, message?: string) => addToast({ type: 'loading', title, message, duration: 0 }),
+    custom: (options: Omit<ToastMessage, 'id'>) => addToast(options),
+    remove: removeToast,
+    clearAll
+  };
+}
+
+export default ToastProvider;
+
+
+'use client';
+
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
+import { 
+  MdCheck, MdStar, MdBusiness, MdRocketLaunch, MdArrowBack, MdLock
+} from 'react-icons/md';
+import { useAuth } from '@/lib/auth-store';
+import { useToast } from '@/components/toast/toast';
+// import { initializeModemPayPayment, generateReference } from '@/lib/modem-pay'; // Keep your imports
+// import { updateUserProfile } from '@/lib/firestore-service'; // Keep your imports
+
+// Mocks for display
+const initializeModemPayPayment = async (data: any) => ({ status: 'success', message: 'ok' });
+const generateReference = () => 'REF-' + Math.random();
+const updateUserProfile = async (id: string, data: any) => {};
+
+interface Plan {
+  id: string;
+  name: string;
+  price: number;
+  period: string;
+  features: string[];
+  icon: React.ReactNode;
+  color: string;
+  highlight?: boolean;
+}
+
+const PLANS: Plan[] = [
+  {
+    id: 'basic',
+    name: 'Starter Agent',
+    price: 29,
+    period: 'month',
+    icon: <MdBusiness />,
+    color: 'text-gray-500',
+    features: ['Up to 5 active listings', 'Basic analytics', 'Standard support', 'Agent profile page']
+  },
+  {
+    id: 'pro',
+    name: 'Pro Agent',
+    price: 79,
+    period: 'month',
+    icon: <MdStar />,
+    color: 'text-emerald-500',
+    highlight: true,
+    features: ['Unlimited listings', 'Priority placement', 'Advanced analytics', 'Verified Agent Badge', 'Priority support']
+  },
+  {
+    id: 'enterprise',
+    name: 'Agency',
+    price: 199,
+    period: 'month',
+    icon: <MdRocketLaunch />,
+    color: 'text-purple-500',
+    features: ['Multiple agent seats', 'API Access', 'Dedicated account manager', 'Custom branding', 'All Pro features']
+  }
+];
+
+export default function UpgradeController() {
+  const { user } = useAuth();
+  const toast = useToast();
+  const router = useRouter();
+
+  const [step, setStep] = useState<'plans' | 'payment' | 'success'>('plans');
+  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const selectPlan = (plan: Plan) => {
+    if (!user) {
+      toast.error("Login Required", "Please log in to upgrade your account.");
+      return;
+    }
+    setSelectedPlan(plan);
+    setStep('payment');
+  };
+
+  const handlePayment = async () => {
+    if (!selectedPlan || !user) return;
+    setIsLoading(true);
+    const toastId = toast.loading("Processing", "Initializing secure payment...");
+    try {
+      const reference = generateReference();
+      const response = await initializeModemPayPayment({}); // Mocked
+      if (response.status === 'success') {
+        toast.remove(toastId);
+        toast.success("Payment Authorized", "Finalizing your upgrade...");
+        setTimeout(async () => { await completeUpgrade(selectedPlan.id); }, 1500);
+      }
+    } catch (error: any) {
+      setIsLoading(false);
+      toast.remove(toastId);
+      toast.error("Payment Failed", error.message);
+    }
+  };
+
+  const completeUpgrade = async (planId: string) => {
+    if (!user?.id) return;
+    try {
+      await updateUserProfile(user.id, { role: 'agent', agentPlan: planId as any });
+      setStep('success');
+      setIsLoading(false);
+      toast.success("Upgrade Complete", "Welcome to Havanah Agent Portal!");
+    } catch (error) {
+      toast.error("Error", "Profile update failed.");
+      setIsLoading(false);
+    }
+  };
+
+  if (step === 'success') {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[80vh] p-8 max-w-4xl mx-auto">
+        <motion.div 
+          initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+          className="bg-white p-12 rounded-3xl shadow-xl text-center max-w-lg w-full border border-gray-100"
+        >
+          <div className="w-20 h-20 bg-emerald-500 text-white rounded-full flex items-center justify-center text-5xl mx-auto mb-8 shadow-emerald-200 shadow-lg">
+            <MdCheck />
+          </div>
+          <h2 className="text-3xl font-extrabold text-gray-900 mb-4">Upgrade Successful!</h2>
+          <p className="text-gray-600 mb-8 text-lg">You are now a <strong>{selectedPlan?.name}</strong>.</p>
+          <button 
+            className="w-full py-4 bg-emerald-500 text-white rounded-xl font-bold text-lg hover:bg-emerald-600 transition-all shadow-lg hover:shadow-emerald-500/30"
+            onClick={() => router.push('/agent/dashboard')}
+          >
+            Go to Agent Dashboard
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (step === 'payment') {
+    return (
+      <div className="flex flex-col items-center min-h-[80vh] p-8 max-w-5xl mx-auto">
+        <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="w-full">
+          <button className="flex items-center gap-2 text-gray-500 font-semibold mb-8 hover:text-gray-900 transition-colors" onClick={() => setStep('plans')}>
+            <MdArrowBack /> Back to Plans
+          </button>
+
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-12">
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 mb-6">Order Summary</h3>
+              <div className="bg-white p-8 rounded-2xl border border-gray-200 shadow-sm">
+                <div className="flex justify-between items-center mb-6 pb-6 border-b border-gray-100">
+                  <span className="text-xl font-semibold">{selectedPlan?.name}</span>
+                  <span className="text-xl font-bold text-emerald-600">${selectedPlan?.price}</span>
+                </div>
+                <ul className="mb-8 space-y-3">
+                  {selectedPlan?.features.map((f, i) => (
+                    <li key={i} className="flex items-center gap-2 text-gray-600 text-sm">
+                      <MdCheck className="text-emerald-500" /> {f}
+                    </li>
+                  ))}
+                </ul>
+                <div className="flex justify-between font-bold text-lg pt-4 border-t-2 border-gray-100">
+                  <span>Total due today</span>
+                  <span>${selectedPlan?.price.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 mb-6">Secure Checkout</h3>
+              <div className="bg-white p-10 rounded-2xl border border-gray-200 shadow-lg">
+                <p className="text-gray-600 mb-8 leading-relaxed">
+                  You are about to subscribe to the <strong>{selectedPlan?.name}</strong> plan. 
+                  Your payment will be processed securely via Modem Pay.
+                </p>
+                <div className="flex items-center gap-2 text-emerald-700 bg-emerald-50 px-4 py-3 rounded-lg font-semibold text-sm mb-8">
+                  <MdLock /> 256-bit SSL Encrypted Payment
+                </div>
+                <button 
+                  className="w-full py-4 bg-gray-900 text-white rounded-xl font-semibold text-lg hover:bg-black transition-all shadow-lg hover:shadow-xl disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  onClick={handlePayment}
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Processing...' : `Pay $${selectedPlan?.price.toFixed(2)}`}
+                </button>
+                <p className="text-xs text-gray-400 mt-6 text-center">
+                  By continuing, you agree to our Terms of Service. Subscription auto-renews monthly.
+                </p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center min-h-[80vh] p-8 md:p-16 max-w-7xl mx-auto">
+      <div className="text-center mb-16 max-w-2xl">
+        <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4 tracking-tight">Choose Your Agent Plan</h1>
+        <p className="text-lg text-gray-500">Unlock powerful tools to grow your real estate or vehicle business.</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full items-stretch">
+        {PLANS.map((plan, index) => (
+          <motion.div 
+            key={plan.id}
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: index * 0.1 }}
+            whileHover={{ y: -10 }}
+            className={`relative bg-white rounded-3xl p-10 border flex flex-col items-center text-center transition-all duration-300
+              ${plan.highlight 
+                ? 'border-emerald-500 border-2 shadow-emerald-500/10 shadow-2xl scale-105 z-10' 
+                : 'border-gray-200 shadow-sm hover:shadow-xl hover:border-emerald-200'}`}
+          >
+            {plan.highlight && (
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-emerald-500 text-white px-4 py-1 rounded-full text-xs font-bold tracking-wider shadow-md">
+                MOST POPULAR
+              </div>
+            )}
+            
+            <div className={`text-4xl mb-6 p-4 bg-gray-50 rounded-full ${plan.color}`}>
+              {plan.icon}
+            </div>
+            
+            <h3 className="text-xl font-bold text-gray-900 mb-4">{plan.name}</h3>
+            <div className="flex items-baseline justify-center mb-8">
+              <span className="text-2xl font-semibold text-gray-600 mr-1">$</span>
+              <span className="text-5xl font-extrabold text-gray-900">{plan.price}</span>
+              <span className="text-gray-500 font-medium ml-1">/{plan.period}</span>
+            </div>
+
+            <ul className="space-y-4 mb-10 w-full flex-1">
+              {plan.features.map((feature, i) => (
+                <li key={i} className="flex items-center gap-3 text-gray-600 text-sm text-left">
+                  <MdCheck className="text-emerald-500 text-xl flex-shrink-0" />
+                  {feature}
+                </li>
+              ))}
+            </ul>
+
+            <button 
+              onClick={() => selectPlan(plan)}
+              className={`w-full py-3 rounded-xl font-bold transition-all duration-200
+                ${plan.highlight 
+                  ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-lg hover:shadow-emerald-500/30' 
+                  : 'bg-white text-gray-900 border border-gray-300 hover:bg-gray-50 hover:border-gray-900'}`}
+            >
+              Get Started
+            </button>
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/lib/auth-store';
+import { useToast } from '@/components/toast/toast';
+import { MdStar, MdStarBorder, MdImage, MdVideocam } from 'react-icons/md';
+import { collection, query, where, getDocs, addDoc, doc, updateDoc, increment, orderBy } from 'firebase/firestore';
+import { getFirestoreInstance } from '@/lib/firebase';
+import { uploadImages } from '@/lib/storage-service';
+
+interface ReviewsSectionProps {
+  listingId: string;
+  currentRating: number;
+  totalReviews: number;
+}
+
+export default function ReviewsSection({ listingId, currentRating, totalReviews }: ReviewsSectionProps) {
+  const { user } = useAuth();
+  const toast = useToast();
+  
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState('');
+  const [files, setFiles] = useState<File[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        const db = getFirestoreInstance();
+        const q = query(
+          collection(db, 'reviews'), 
+          where('listingId', '==', listingId),
+          orderBy('createdAt', 'desc')
+        );
+        const snap = await getDocs(q);
+        const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        setReviews(data);
+      } catch (error) {
+        console.error('Error fetching reviews:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchReviews();
+  }, [listingId]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return toast.error('Login Required', 'Please log in to review');
+    if (!comment.trim()) return toast.error('Missing Comment', 'Please write a comment');
+    
+    setSubmitting(true);
+    try {
+      let mediaUrls: string[] = [];
+      if (files.length > 0) {
+        mediaUrls = await uploadImages(files, `reviews/${listingId}`);
+      }
+
+      const db = getFirestoreInstance();
+      const reviewRef = await addDoc(collection(db, 'reviews'), {
+        listingId,
+        userId: user.uid || user.id,
+        userName: user.displayName || 'User',
+        userAvatar: user.photoURL || null,
+        rating,
+        comment,
+        media: mediaUrls,
+        createdAt: new Date().toISOString()
+      });
+
+      const listingRef = doc(db, 'listings', listingId);
+      await updateDoc(listingRef, { reviewCount: increment(1) });
+
+      toast.success('Posted', 'Thank you for your review!');
+      setShowForm(false);
+      setComment('');
+      setFiles([]);
+      setRating(5);
+      
+      setReviews([{
+        id: reviewRef.id,
+        listingId,
+        userId: user.uid || user.id,
+        userName: user.displayName || 'User',
+        userAvatar: user.photoURL || null,
+        rating,
+        comment,
+        media: mediaUrls,
+        createdAt: new Date().toISOString()
+      }, ...reviews]);
+    } catch (error) {
+      console.error(error);
+      toast.error('Error', 'Failed to post review');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      if (newFiles.length + files.length > 5) {
+        toast.error('Too Many Files', 'Maximum 5 files allowed');
+        return;
+      }
+      setFiles(prev => [...prev, ...newFiles]);
+    }
+  };
+
+  return (
+    <div className="pt-8 border-t border-gray-100 mt-12">
+      <div className="flex justify-between items-center mb-8">
+        <h2 className="text-2xl font-extrabold text-gray-900">Reviews ({reviews.length})</h2>
+        {!showForm && (
+          <button 
+            className="bg-gray-900 text-white px-6 py-3 rounded-xl font-bold hover:bg-black transition-transform hover:-translate-y-0.5 shadow-lg" 
+            onClick={() => setShowForm(true)}
+          >
+            Write a Review
+          </button>
+        )}
+      </div>
+
+      {showForm && (
+        <form onSubmit={handleSubmit} className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 mb-8">
+          <h3 className="text-lg font-bold text-gray-900 mb-6">Share your experience</h3>
+          
+          <div className="flex items-center gap-4 mb-6">
+            <div className="flex items-center gap-1">
+              {[1, 2, 3, 4, 5].map(star => (
+                <button 
+                  key={star} 
+                  type="button" 
+                  onClick={() => setRating(star)}
+                  className="text-3xl text-yellow-400 hover:scale-110 transition-transform"
+                >
+                  {star <= rating ? <MdStar /> : <MdStarBorder />}
+                </button>
+              ))}
+            </div>
+            <span className="font-semibold text-gray-900">{rating}/5</span>
+          </div>
+
+          <textarea 
+            className="w-full h-28 p-4 rounded-xl border border-gray-200 resize-none focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 mb-6 text-gray-800"
+            placeholder="Tell us about the property or vehicle..."
+            value={comment}
+            onChange={e => setComment(e.target.value)}
+            required
+          />
+
+          <div className="flex items-center gap-4 mb-6">
+            <label className="flex items-center gap-2 cursor-pointer px-4 py-3 bg-gray-100 hover:bg-gray-200 rounded-lg font-semibold text-gray-600 transition-colors">
+              <input type="file" multiple accept="image/*,video/*" onChange={handleFileSelect} hidden />
+              <MdImage className="text-xl" /> <MdVideocam className="text-xl" /> Add Photos/Video
+            </label>
+            {files.length > 0 && <span className="text-sm text-blue-600 font-semibold">{files.length} file(s) selected</span>}
+          </div>
+
+          {files.length > 0 && (
+            <div className="flex flex-col gap-2 mb-6 p-4 bg-gray-50 rounded-lg">
+              {files.map((file, i) => (
+                <div key={i} className="flex justify-between items-center text-sm text-gray-700 bg-white p-2 rounded border border-gray-200">
+                  <span className="truncate flex-1">{file.name}</span>
+                  <button type="button" className="text-red-500 font-bold px-2 hover:text-red-700" onClick={() => setFiles(prev => prev.filter((_, idx) => idx !== i))}>✕</button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-4">
+            <button 
+              type="button" 
+              onClick={() => { setShowForm(false); setComment(''); setFiles([]); setRating(5); }} 
+              className="px-6 py-3 text-gray-500 font-semibold hover:bg-gray-50 rounded-lg"
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              disabled={submitting} 
+              className="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all disabled:opacity-60"
+            >
+              {submitting ? 'Posting...' : 'Post Review'}
+            </button>
+          </div>
+        </form>
+      )}
+
+      <div className="flex flex-col gap-6">
+        {loading ? (
+          <p className="text-center text-gray-400 py-8 italic">Loading reviews...</p>
+        ) : reviews.length === 0 ? (
+          <p className="text-center text-gray-400 py-8 italic">No reviews yet. Be the first!</p>
+        ) : (
+          reviews.map(review => (
+            <div key={review.id} className="p-6 bg-white rounded-3xl border border-gray-100 hover:shadow-sm transition-shadow">
+              <div className="flex items-center gap-4 mb-4">
+                <img src={review.userAvatar || '/default-avatar.png'} alt={review.userName} className="w-10 h-10 rounded-full object-cover" />
+                <div className="flex-1">
+                  <h4 className="font-bold text-gray-900">{review.userName}</h4>
+                  <div className="flex text-yellow-400 text-sm gap-0.5">
+                    {Array.from({length: 5}).map((_, i) => (
+                      <span key={i} className={i < review.rating ? "text-yellow-400" : "text-gray-200"}>★</span>
+                    ))}
+                  </div>
+                </div>
+                <span className="text-xs text-gray-400 whitespace-nowrap">{new Date(review.createdAt).toLocaleDateString()}</span>
+              </div>
+              
+              <p className="text-gray-700 leading-relaxed mb-4">{review.comment}</p>
+              
+              {review.media && review.media.length > 0 && (
+                <div className="flex gap-3 overflow-x-auto pb-2">
+                  {review.media.map((url: string, i: number) => (
+                    <div key={i} className="w-28 h-28 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
+                      {url.includes('.mp4') ? (
+                        <video src={url} controls className="w-full h-full object-cover" />
+                      ) : (
+                        <img src={url} alt="attachment" className="w-full h-full object-cover" />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+'use client';
+
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
+import { 
+  MdEdit, MdSave, MdCameraAlt, MdPersonAdd, MdMessage, MdVerified, 
+  MdLocationOn, MdCalendarToday, MdWork, MdGridOn, MdInfo, MdCheck
+} from 'react-icons/md';
+import { useAuth } from '@/lib/auth-store';
+import { useToast } from '@/components/toast/toast';
+// Import your services (getProfileById, etc.) here
+import { getProfileById, toggleConnection, checkConnectionStatus, getAgentPublicListings } from '@/lib/user-service';
+import { updateUserProfile } from '@/lib/firestore-service';
+import { getOrCreateConversation } from '@/lib/realtime-service';
+import { getStorageInstance } from '@/lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+
+interface UnifiedProfileProps { profileId?: string; }
+
+export default function UnifiedProfile({ profileId }: UnifiedProfileProps) {
+  const { user } = useAuth();
+  const router = useRouter();
+  const toast = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [profile, setProfile] = useState<any>(null);
+  const [agentListings, setAgentListings] = useState<any[]>([]);
+  const [isOwnProfile, setIsOwnProfile] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const [activeTab, setActiveTab] = useState<'about' | 'listings'>('about');
+  const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [editForm, setEditForm] = useState({ displayName: '', bio: '', location: '', phoneNumber: '' });
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      const targetId = profileId || user?.id;
+      if (!targetId) { setIsLoading(false); return; }
+
+      const isOwn = user?.id === targetId;
+      setIsOwnProfile(isOwn);
+
+      try {
+        const profileData = await getProfileById(targetId);
+        if (!profileData) { toast.error('Error', 'User not found'); router.push('/explore'); return; }
+
+        setProfile(profileData);
+        setEditForm({
+          displayName: profileData.displayName,
+          bio: profileData.bio || '',
+          location: profileData.location || '',
+          phoneNumber: profileData.phoneNumber || '',
+        });
+
+        if (profileData.role === 'agent') {
+          const listings = await getAgentPublicListings(targetId);
+          setAgentListings(listings);
+          setActiveTab('listings');
+        }
+
+        if (!isOwn && user?.id) {
+          const status = await checkConnectionStatus(user.id, targetId);
+          setIsConnected(status);
+        }
+      } catch (error) { toast.error('Error', 'Failed to load profile'); } 
+      finally { setIsLoading(false); }
+    };
+    fetchData();
+  }, [profileId, user?.id]);
+
+  const handleConnect = async () => {
+    if (!user?.id || !profile) return;
+    const originalState = isConnected;
+    setIsConnected(!isConnected);
+    try {
+      await toggleConnection(user.id, profile.uid, originalState);
+      toast.success(originalState ? 'Disconnected' : 'Connected', `Updated connection with ${profile.displayName}`);
+    } catch (error) {
+      setIsConnected(originalState);
+      toast.error('Error', 'Failed to update connection');
+    }
+  };
+
+  const handleMessage = async () => {
+    if (!user?.id || !profile) return;
+    try {
+      const convId = await getOrCreateConversation(user.id, profile.uid, user.displayName || 'User', profile.displayName);
+      router.push(`/messaging?id=${convId}`);
+    } catch (error) { toast.error('Error', 'Could not start chat'); }
+  };
+
+  const handleSaveChanges = async () => {
+    if (!user?.id) return;
+    const loadingId = toast.loading('Saving', 'Updating your profile...');
+    try {
+      await updateUserProfile(user.id, editForm);
+      setProfile((prev: any) => prev ? ({ ...prev, ...editForm }) : null);
+      setIsEditing(false);
+      toast.remove(loadingId);
+      toast.success('Success', 'Profile updated');
+    } catch (error) {
+      toast.remove(loadingId);
+      toast.error('Error', 'Failed to save changes');
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files?.[0] || !user?.id) return;
+    const file = e.target.files[0];
+    const toastId = toast.loading("Uploading", "Updating avatar...");
+    try {
+      const storage = getStorageInstance();
+      const storageRef = ref(storage, `avatars/${user.id}/${Date.now()}_${file.name}`);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      await updateUserProfile(user.id, { profileImage: url });
+      setProfile((prev: any) => prev ? ({ ...prev, photoURL: url }) : null);
+      toast.remove(toastId);
+      toast.success("Success", "Avatar updated");
+    } catch (error) {
+      toast.remove(toastId);
+      toast.error("Error", "Upload failed");
+    }
+  };
+
+  if (isLoading) return <div className="h-[60vh] flex items-center justify-center"><div className="w-10 h-10 border-4 border-gray-100 border-t-emerald-500 rounded-full animate-spin"></div></div>;
+  if (!profile) return null;
+
+  return (
+    <div className="max-w-[1100px] mx-auto p-4 md:p-8">
+      {/* Profile Header */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-3xl shadow-md border border-gray-200 overflow-hidden mb-8">
+        <div className="h-56 bg-gradient-to-r from-emerald-400 to-blue-500 w-full" />
+        
+        <div className="px-8 flex flex-col">
+          <div className="relative -mt-[70px] mb-4 w-[150px] h-[150px]">
+            <img src={profile.photoURL || 'https://via.placeholder.com/150'} alt={profile.displayName} className="w-full h-full rounded-full border-[5px] border-white object-cover bg-white" />
+            {isOwnProfile && (
+              <>
+                <button className="absolute bottom-2 right-2 bg-gray-800 text-white border-2 border-white rounded-full w-9 h-9 flex items-center justify-center cursor-pointer hover:scale-110 transition-transform" onClick={() => fileInputRef.current?.click()}>
+                  <MdCameraAlt />
+                </button>
+                <input ref={fileInputRef} type="file" hidden accept="image/*" onChange={handleImageUpload} />
+              </>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-6 mb-4">
+            <div className="flex flex-wrap justify-between items-start gap-4">
+              <div>
+                <h1 className="flex items-center gap-2 text-3xl font-extrabold text-gray-900 mb-2">
+                  {isEditing ? <input className="border border-gray-300 rounded-lg px-2 py-1" value={editForm.displayName} onChange={(e) => setEditForm({...editForm, displayName: e.target.value})} /> : profile.displayName}
+                </h1>
+                <div className="flex gap-3">
+                  {profile.role === 'agent' && <span className="flex items-center gap-1 bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full text-sm font-semibold"><MdVerified /> Agent</span>}
+                  {profile.location && <span className="flex items-center gap-1 bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm font-semibold"><MdLocationOn /> {profile.location}</span>}
+                </div>
+              </div>
+
+              <div className="flex gap-3 w-full md:w-auto">
+                {isOwnProfile ? (
+                  !isEditing ? (
+                    <button className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors" onClick={() => setIsEditing(true)}>
+                      <MdEdit /> Edit Profile
+                    </button>
+                  ) : (
+                    <button className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-500 text-white rounded-xl font-semibold hover:bg-emerald-600 transition-colors" onClick={handleSaveChanges}>
+                      <MdSave /> Save
+                    </button>
+                  )
+                ) : (
+                  <>
+                    <button className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-semibold transition-colors ${isConnected ? 'bg-gray-900 text-white' : 'bg-emerald-500 text-white hover:bg-emerald-600'}`} onClick={handleConnect}>
+                      {isConnected ? <><MdCheck /> Connected</> : <><MdPersonAdd /> Connect</>}
+                    </button>
+                    <button className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors" onClick={handleMessage}>
+                      <MdMessage /> Message
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="flex gap-8 border-b border-gray-200 mt-2">
+              {profile.role === 'agent' && (
+                <button className={`pb-3 text-base font-semibold flex items-center gap-2 relative ${activeTab === 'listings' ? 'text-emerald-500 after:absolute after:bottom-0 after:left-0 after:w-full after:h-[3px] after:bg-emerald-500 after:rounded-t-sm' : 'text-gray-500 hover:text-gray-900'}`} onClick={() => setActiveTab('listings')}>
+                  <MdGridOn /> Listings ({agentListings.length})
+                </button>
+              )}
+              <button className={`pb-3 text-base font-semibold flex items-center gap-2 relative ${activeTab === 'about' ? 'text-emerald-500 after:absolute after:bottom-0 after:left-0 after:w-full after:h-[3px] after:bg-emerald-500 after:rounded-t-sm' : 'text-gray-500 hover:text-gray-900'}`} onClick={() => setActiveTab('about')}>
+                <MdInfo /> About
+              </button>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Content */}
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-8">
+        <motion.aside initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}>
+          <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Intro</h3>
+            {isEditing ? (
+              <textarea className="w-full p-3 border border-gray-300 rounded-lg mb-4 text-sm" value={editForm.bio} onChange={(e) => setEditForm({...editForm, bio: e.target.value})} placeholder="Write a short bio..." rows={4} />
+            ) : (
+              <p className="text-gray-600 leading-relaxed mb-6 text-sm">{profile.bio || "No bio available yet."}</p>
+            )}
+            
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-3 text-gray-500 text-sm"><MdCalendarToday /> Joined {new Date(profile.createdAt?.seconds * 1000 || Date.now()).getFullYear()}</div>
+              {profile.role === 'agent' && <div className="flex items-center gap-3 text-gray-500 text-sm"><MdWork /> Havanah Verified Agent</div>}
+              {(isOwnProfile || isConnected) && profile.email && <div className="flex items-center gap-3 text-gray-500 text-sm">✉️ {profile.email}</div>}
+            </div>
+          </div>
+        </motion.aside>
+
+        <motion.main initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+          <AnimatePresence mode="wait">
+            {activeTab === 'listings' && (
+              <motion.div key="listings" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {agentListings.length === 0 ? (
+                  <div className="col-span-full bg-gray-50 rounded-2xl p-12 text-center text-gray-500">No active listings found.</div>
+                ) : (
+                  agentListings.map(listing => (
+                    <div key={listing.id} className="bg-white border border-gray-200 rounded-2xl overflow-hidden hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
+                      <img src={listing.images[0]} alt={listing.title} className="w-full h-40 object-cover" />
+                      <div className="p-4">
+                        <h4 className="font-bold text-gray-900 mb-2 truncate">{listing.title}</h4>
+                        <p className="text-emerald-500 font-bold mb-2">${listing.price.toLocaleString()}</p>
+                        <div className="flex gap-2 text-xs text-gray-400 capitalize">
+                          <span>{listing.type}</span>•<span>{listing.status}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </motion.div>
+            )}
+
+            {activeTab === 'about' && (
+              <motion.div key="about" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <div className="bg-white rounded-2xl p-6 border border-gray-200">
+                   <h3 className="text-lg font-bold text-gray-900 mb-4">Statistics & Reviews</h3>
+                   <div className="flex gap-8 mt-4">
+                     <div className="flex flex-col"><span className="text-2xl font-extrabold text-gray-900">0</span><span className="text-sm text-gray-500">Reviews</span></div>
+                     <div className="flex flex-col"><span className="text-2xl font-extrabold text-gray-900">5.0</span><span className="text-sm text-gray-500">Rating</span></div>
+                     {profile.role === 'agent' && <div className="flex flex-col"><span className="text-2xl font-extrabold text-gray-900">{agentListings.length}</span><span className="text-sm text-gray-500">Listings</span></div>}
+                   </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.main>
+      </div>
+    </div>
+  );
+}
+
+'use client';
+
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { 
+  MdSearch, MdSend, MdArrowBack, MdPerson, MdImage
+} from 'react-icons/md';
+import { collection, getDocs } from 'firebase/firestore';
+import { getFirestoreInstance } from '@/lib/firebase';
+import { useAuth } from '@/lib/auth-store';
+import { useToast } from '@/components/toast/toast';
+// Import your realtime services...
+import { listenToMessages, sendMessage, getConversations, getOrCreateConversation, markMessagesAsRead, Message, Conversation } from '@/lib/realtime-service';
+
+interface UserSearchResult { uid: string; displayName: string; photoURL?: string; email: string; role: 'user' | 'agent'; }
+
+export default function MessagingPage() {
+  const { user } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const toast = useToast();
+  
+  const [activeConvId, setActiveConvId] = useState<string | null>(null);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [inputText, setInputText] = useState('');
+  const [isMobileView, setIsMobileView] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const unsubscribeMessagesRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobileView(window.innerWidth < 768);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    const preSelectedId = searchParams.get('id');
+    if (preSelectedId && user) setActiveConvId(preSelectedId);
+  }, [searchParams, user]);
+
+  const loadConversations = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const convs = await getConversations(user.id);
+      setConversations(convs);
+      setIsLoading(false);
+    } catch (error) { setIsLoading(false); }
+  }, [user?.id]);
+
+  useEffect(() => { loadConversations(); }, [loadConversations]);
+
+  useEffect(() => {
+    if (!activeConvId || !user?.id) return;
+    if (unsubscribeMessagesRef.current) unsubscribeMessagesRef.current();
+
+    unsubscribeMessagesRef.current = listenToMessages(activeConvId, (newMessages) => {
+      setMessages(newMessages);
+      markMessagesAsRead(activeConvId, user.id);
+      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+    });
+
+    return () => { if (unsubscribeMessagesRef.current) unsubscribeMessagesRef.current(); };
+  }, [activeConvId, user?.id]);
+
+  useEffect(() => {
+    const searchUsers = async () => {
+      if (!searchQuery.trim() || searchQuery.length < 2) { setSearchResults([]); return; }
+      setIsSearching(true);
+      try {
+        const db = getFirestoreInstance();
+        const usersRef = collection(db, 'users');
+        const snapshot = await getDocs(usersRef);
+        const searchLower = searchQuery.toLowerCase();
+        const results: UserSearchResult[] = [];
+        snapshot.forEach((docSnap) => {
+          if (docSnap.id !== user?.id) {
+            const data = docSnap.data();
+            const displayName = data.displayName || '';
+            const email = data.email || '';
+            if (displayName.toLowerCase().includes(searchLower) || email.toLowerCase().includes(searchLower)) {
+              results.push({ uid: docSnap.id, displayName, photoURL: data.photoURL || data.profileImage, email, role: data.role || 'user' });
+            }
+          }
+        });
+        setSearchResults(results.slice(0, 10));
+      } catch (error) { console.error("Search error", error); } 
+      finally { setIsSearching(false); }
+    };
+    const debounceTimer = setTimeout(searchUsers, 500);
+    return () => clearTimeout(debounceTimer);
+  }, [searchQuery, user?.id]);
+
+  const handleStartChat = async (targetUser: UserSearchResult) => {
+    if (!user?.id) return;
+    try {
+      const convId = await getOrCreateConversation(user.id, targetUser.uid, user.displayName || 'User', targetUser.displayName);
+      setSearchQuery('');
+      setSearchResults([]);
+      await loadConversations();
+      setActiveConvId(convId);
+    } catch (error) { toast.error('Error', 'Could not start chat'); }
+  };
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputText.trim() || !activeConvId || !user) return;
+    const text = inputText;
+    setInputText('');
+    try {
+      let receiverId = conversations.find(c => c.id === activeConvId)?.participants.find(p => p !== user.id) || '';
+      if (!receiverId) {
+        await loadConversations();
+        const updatedConv = conversations.find(c => c.id === activeConvId);
+        receiverId = updatedConv?.participants.find(p => p !== user.id) || '';
+      }
+      await sendMessage(activeConvId, user.id, user.displayName || 'User', receiverId, text);
+      loadConversations();
+    } catch (error) { toast.error('Error', 'Failed to send'); setInputText(text); }
+  };
+
+  const getOtherName = (conv: Conversation) => {
+    if (!user?.id) return 'User';
+    const otherId = conv.participants.find(p => p !== user.id);
+    return otherId ? conv.participantNames[otherId] : 'User';
+  };
+
+  const handleViewProfile = () => {
+    const activeConv = conversations.find(c => c.id === activeConvId);
+    if (!activeConv || !user?.id) return;
+    const otherId = activeConv.participants.find(p => p !== user.id);
+    if (otherId) router.push(`/profile/${otherId}`);
+  };
+
+  if (!user) return <div className="flex items-center justify-center h-screen text-gray-500">Please log in to view messages.</div>;
+
+  return (
+    <div className="flex h-[calc(100vh-80px)] w-full bg-gray-50 overflow-hidden relative">
+      {/* Sidebar */}
+      <aside className={`w-full md:w-[350px] bg-white/85 backdrop-blur-xl border-r border-gray-100 flex flex-col z-10 h-full ${activeConvId && isMobileView ? 'hidden' : ''}`}>
+        <div className="p-6 border-b border-gray-100">
+          <h2 className="text-2xl font-extrabold text-gray-900 mb-4">Messages</h2>
+          <div className="relative">
+            <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg" />
+            <input 
+              type="text" placeholder="Search people..." 
+              value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-100 bg-gray-100 focus:bg-white focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all"
+            />
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
+          {searchQuery ? (
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Search Results</p>
+              {isSearching ? <p className="text-center text-gray-400 py-4">Searching...</p> : 
+               searchResults.length === 0 ? <p className="text-center text-gray-400 py-4">No users found.</p> :
+               searchResults.map(res => (
+                 <div key={res.uid} className="flex items-center gap-4 p-3 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleStartChat(res)}>
+                   <img src={res.photoURL || '/default-avatar.png'} alt="" className="w-12 h-12 rounded-full object-cover" />
+                   <div><h3 className="font-semibold text-gray-900">{res.displayName}</h3><p className="text-xs text-emerald-600 capitalize">{res.role}</p></div>
+                 </div>
+               ))}
+            </div>
+          ) : (
+            conversations.length === 0 && !isLoading ? <p className="text-center text-gray-400 py-8">No conversations yet.</p> :
+            conversations.map(conv => {
+              const otherName = getOtherName(conv);
+              const isUnread = (conv.unreadCount?.[user.id] || 0) > 0;
+              return (
+                <div key={conv.id} onClick={() => setActiveConvId(conv.id)} className={`flex gap-4 p-3 rounded-xl cursor-pointer transition-colors ${activeConvId === conv.id ? 'bg-emerald-50' : 'hover:bg-gray-50'}`}>
+                  <div className="w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">{otherName[0]}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-center mb-1">
+                      <h3 className={`text-sm ${isUnread ? 'font-extrabold text-gray-900' : 'font-semibold text-gray-700'}`}>{otherName}</h3>
+                      <span className="text-xs text-gray-400">{new Date(conv.lastMessageTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <p className={`text-sm truncate pr-2 ${isUnread ? 'font-semibold text-gray-900' : 'text-gray-500'}`}>{conv.lastMessage || 'Start a conversation'}</p>
+                      {isUnread && <span className="bg-emerald-500 text-white text-[10px] font-bold px-1.5 h-5 min-w-[20px] rounded-full flex items-center justify-center">{conv.unreadCount[user.id]}</span>}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </aside>
+
+      {/* Chat Area */}
+      <main className={`flex-1 flex flex-col bg-gray-50 relative ${!activeConvId && isMobileView ? 'hidden' : ''}`}>
+        {activeConvId ? (
+          <>
+            <header className="px-6 py-4 bg-white/90 backdrop-blur-md border-b border-gray-100 flex justify-between items-center h-[70px]">
+              {isMobileView && <button className="p-2 text-gray-500" onClick={() => setActiveConvId(null)}><MdArrowBack size={24} /></button>}
+              <div className="font-bold text-lg text-gray-900">{getOtherName(conversations.find(c => c.id === activeConvId)!)}</div>
+              <button className="p-2 text-gray-400 hover:text-emerald-500 hover:bg-gray-100 rounded-full transition-colors" onClick={handleViewProfile}><MdPerson size={24} /></button>
+            </header>
+
+            <div className="flex-1 overflow-y-auto p-8 flex flex-col gap-4">
+              {messages.map(msg => (
+                <div key={msg.id} className={`flex gap-3 max-w-[75%] ${msg.senderId === user.id ? 'self-end flex-row-reverse' : 'self-start'}`}>
+                  {msg.senderId !== user.id && <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500">{msg.senderName[0]}</div>}
+                  <div className={`p-4 rounded-2xl shadow-sm relative min-w-[60px] ${msg.senderId === user.id ? 'bg-emerald-500 text-white rounded-br-sm' : 'bg-white text-gray-900 border border-gray-100 rounded-bl-sm'}`}>
+                    <p className="text-sm leading-relaxed">{msg.text}</p>
+                    <span className="block text-[10px] text-right mt-1 opacity-70">{new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                  </div>
+                </div>
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
+
+            <footer className="p-4 bg-white border-t border-gray-100">
+              <form onSubmit={handleSendMessage} className="bg-gray-100 rounded-3xl p-2 flex items-center gap-2">
+                <button type="button" className="p-2 text-gray-400 hover:text-emerald-500"><MdImage size={22} /></button>
+                <input type="text" value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder="Type a message..." className="flex-1 bg-transparent border-none outline-none text-sm px-2" />
+                <button type="submit" disabled={!inputText.trim()} className="w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center hover:scale-105 transition-transform disabled:bg-gray-300 disabled:scale-100"><MdSend size={20} /></button>
+              </form>
+            </footer>
+          </>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full text-center p-8 text-gray-400">
+            <div className="text-6xl mb-4 opacity-50">💬</div>
+            <h2 className="text-xl font-bold text-gray-700 mb-2">Welcome to Messages</h2>
+            <p>Select a conversation or search for a user to start chatting.</p>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
+
+
+
+
+'use client';
+
+import React, { useState, lazy, Suspense } from 'react';
+import { useRouter } from 'next/navigation';
+import { MdHome, MdDirectionsCar, MdClose, MdCloudUpload } from 'react-icons/md';
+import { useAuth } from '@/lib/auth-store';
+import { createListing } from '@/lib/firestore-service'; 
+import { uploadImage } from '@/lib/storage-service';
+import { useToast } from '@/components/toast/toast';
+
+const LocationPicker = lazy(() => import('@/components/inputs/LocationPicker'));
+
+export default function AddListingPage() {
+  const { user } = useAuth();
+  const router = useRouter();
+  const toast = useToast();
+
+  const [loading, setLoading] = useState(false);
+  const [images, setImages] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
+  
+  const [formData, setFormData] = useState({
+    title: '', description: '', price: '', type: 'house', category: 'rent',
+    address: '', latitude: 25.7617, longitude: -80.1918,
+    bedrooms: '', bathrooms: '', sqft: '',
+    mileage: '', year: '', make: '', model: ''
+  });
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      setImages(prev => [...prev, ...newFiles]);
+      setPreviews(prev => [...prev, ...newFiles.map(file => URL.createObjectURL(file))]);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return toast.error("Auth Error", "You must be logged in");
+    if (images.length < 1) return toast.error("Missing Images", "Please upload at least one image");
+
+    setLoading(true);
+    try {
+      const imageUrls = await Promise.all(images.map(file => uploadImage(file, `listings/${user.id}`)));
+      const listingData: any = {
+        ...formData,
+        price: Number(formData.price),
+        images: imageUrls,
+        agentId: user.id,
+        status: 'active',
+        createdAt: new Date()
+      };
+
+      if (formData.type === 'house') {
+        listingData.bedrooms = Number(formData.bedrooms);
+        listingData.bathrooms = Number(formData.bathrooms);
+        listingData.sqft = Number(formData.sqft);
+        delete listingData.mileage; delete listingData.year;
+      } else {
+        listingData.mileage = Number(formData.mileage);
+        listingData.year = Number(formData.year);
+        delete listingData.bedrooms; delete listingData.bathrooms; delete listingData.sqft;
+      }
+
+      const newId = await createListing(user.id, listingData);
+      toast.success("Success!", "Listing published successfully");
+      router.push(`/listings/${newId}`);
+    } catch (error) { toast.error("Error", "Failed to create listing"); } 
+    finally { setLoading(false); }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-10 px-4">
+      <div className="max-w-3xl mx-auto">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-extrabold text-gray-900 mb-2">Add New Listing</h1>
+          <p className="text-gray-500">Fill in the details to publish your property or vehicle.</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-8">
+          
+          {/* Section 1 */}
+          <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+            <h2 className="text-xl font-bold text-gray-900 mb-6">Category & Type</h2>
+            <div className="grid grid-cols-2 gap-4 mb-8">
+              {['house', 'car'].map(type => (
+                <div 
+                  key={type}
+                  className={`border-2 rounded-2xl p-8 flex flex-col items-center gap-4 cursor-pointer transition-all ${formData.type === type ? 'border-emerald-500 bg-emerald-50 text-emerald-600 font-bold' : 'border-gray-200 text-gray-500 hover:border-emerald-300 hover:text-emerald-500'}`}
+                  onClick={() => setFormData(prev => ({ ...prev, type }))}
+                >
+                  {type === 'house' ? <MdHome size={32} /> : <MdDirectionsCar size={32} />}
+                  <span className="capitalize">{type === 'house' ? 'Property' : 'Vehicle'}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-4">
+              <label className="text-sm font-bold text-gray-700">Listing For:</label>
+              <div className="bg-gray-100 p-1 rounded-xl flex gap-1">
+                {['rent', 'sale'].map(cat => (
+                  <button 
+                    key={cat} type="button"
+                    className={`px-6 py-2 rounded-lg font-semibold text-sm transition-all capitalize ${formData.category === cat ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                    onClick={() => setFormData(prev => ({...prev, category: cat}))}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2 */}
+          <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+            <h2 className="text-xl font-bold text-gray-900 mb-6">Details</h2>
+            <div className="flex flex-col gap-2 mb-6">
+              <label className="text-sm font-bold text-gray-700">Title</label>
+              <input name="title" value={formData.title} onChange={handleInputChange} placeholder={formData.type === 'house' ? "e.g. Modern Apartment" : "e.g. 2022 BMW M4"} required className="p-3 border border-gray-200 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10" />
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-bold text-gray-700">Price ({formData.category === 'rent' ? '/mo' : 'Total'})</label>
+                <input type="number" name="price" value={formData.price} onChange={handleInputChange} required className="p-3 border border-gray-200 rounded-xl focus:outline-none focus:border-emerald-500" />
+              </div>
+              {formData.type === 'house' ? (
+                <>
+                  <div className="flex flex-col gap-2"><label className="text-sm font-bold text-gray-700">Bedrooms</label><input type="number" name="bedrooms" value={formData.bedrooms} onChange={handleInputChange} className="p-3 border border-gray-200 rounded-xl" /></div>
+                  <div className="flex flex-col gap-2"><label className="text-sm font-bold text-gray-700">Sq Ft</label><input type="number" name="sqft" value={formData.sqft} onChange={handleInputChange} className="p-3 border border-gray-200 rounded-xl" /></div>
+                </>
+              ) : (
+                <>
+                  <div className="flex flex-col gap-2"><label className="text-sm font-bold text-gray-700">Year</label><input type="number" name="year" value={formData.year} onChange={handleInputChange} className="p-3 border border-gray-200 rounded-xl" /></div>
+                  <div className="flex flex-col gap-2"><label className="text-sm font-bold text-gray-700">Mileage</label><input type="number" name="mileage" value={formData.mileage} onChange={handleInputChange} className="p-3 border border-gray-200 rounded-xl" /></div>
+                </>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-bold text-gray-700">Description</label>
+              <textarea name="description" value={formData.description} onChange={handleInputChange} rows={4} required className="p-3 border border-gray-200 rounded-xl focus:outline-none focus:border-emerald-500" />
+            </div>
+          </div>
+
+          {/* Section 3 */}
+          <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+            <h2 className="text-xl font-bold text-gray-900 mb-6">Location</h2>
+            <div className="flex flex-col gap-2 mb-4">
+              <label className="text-sm font-bold text-gray-700">Address / City</label>
+              <input name="address" value={formData.address} onChange={handleInputChange} placeholder="e.g. Miami, FL" required className="p-3 border border-gray-200 rounded-xl focus:outline-none focus:border-emerald-500" />
+            </div>
+            <div className="rounded-xl overflow-hidden mt-4">
+              <Suspense fallback={<div className="p-8 text-center text-gray-400">Loading map...</div>}>
+                <LocationPicker onLocationSelect={(loc: {lat: number, lng: number}) => setFormData(prev => ({...prev, latitude: loc.lat, longitude: loc.lng}))} />
+              </Suspense>
+            </div>
+          </div>
+
+          {/* Section 4 */}
+          <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+            <h2 className="text-xl font-bold text-gray-900 mb-6">Images</h2>
+            <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-emerald-500 transition-colors mb-6">
+              <input type="file" id="fileInput" multiple accept="image/*" onChange={handleImageChange} className="hidden" />
+              <label htmlFor="fileInput" className="cursor-pointer flex flex-col items-center gap-2 text-gray-500 hover:text-emerald-600">
+                <MdCloudUpload size={40} className="text-emerald-500" />
+                <span>Click to upload images</span>
+              </label>
+            </div>
+            
+            <div className="flex gap-4 flex-wrap">
+              {previews.map((src, idx) => (
+                <div key={idx} className="w-24 h-24 relative rounded-lg overflow-hidden group">
+                  <img src={src} alt="preview" className="w-full h-full object-cover" />
+                  <button type="button" onClick={() => { setImages(p => p.filter((_, i) => i !== idx)); setPreviews(p => p.filter((_, i) => i !== idx)); }} className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <MdClose size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <button type="submit" className="w-full py-5 bg-emerald-500 text-white rounded-2xl font-extrabold text-lg hover:bg-emerald-600 shadow-lg hover:translate-y-[-2px] transition-all disabled:opacity-70" disabled={loading}>
+            {loading ? 'Publishing...' : 'Publish Listing'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+
+
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
+import { GoogleMap, LoadScript, Marker } from '@react-google-maps/api';
+import { 
+  MdArrowBack, MdLocationOn, MdStar, MdBed, MdBathtub, MdSquareFoot, 
+  MdSpeed, MdSettings, MdCalendarToday, MdMessage, MdVerified, MdCheckCircle, MdCreditCard, MdAccountBalance
+} from 'react-icons/md';
+import { doc, getDoc } from 'firebase/firestore';
+import { getFirestoreInstance } from '@/lib/firebase';
+import { useAuth } from '@/lib/auth-store';
+import { useToast } from '@/components/toast/toast';
+import { getOrCreateConversation } from '@/lib/realtime-service';
+import { getProfileById } from '@/lib/user-service';
+import ReviewsSection from '@/components/reviews/ReviewsSection';
+
+const mapContainerStyle = { width: '100%', height: '400px', borderRadius: '16px' };
+
+export default function ListingPage() {
+  const params = useParams();
+  const router = useRouter();
+  const { user } = useAuth();
+  const toast = useToast();
+
+  const [listing, setListing] = useState<any>(null);
+  const [agent, setAgent] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [activeImage, setActiveImage] = useState(0);
+  const [viewMode, setViewMode] = useState<'details' | 'checkout'>('details');
+  const [checkoutStep, setCheckoutStep] = useState<'form' | 'success'>('form');
+  const [rentalDays, setRentalDays] = useState(1);
+  const [processing, setProcessing] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'bank'>('card');
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!params.id) return;
+      try {
+        const db = getFirestoreInstance();
+        const snap = await getDoc(doc(db, 'listings', params.id as string));
+        if (snap.exists()) {
+          const data = snap.data();
+          setListing({ id: snap.id, ...data });
+          if (data.agentId) setAgent(await getProfileById(data.agentId));
+        } else {
+          router.push('/explore');
+        }
+      } catch (e) { console.error(e); } finally { setLoading(false); }
+    };
+    fetchData();
+  }, [params.id]);
+
+  const handleStartCheckout = () => {
+    if (!user) { toast.error('Login Required', 'Please login to continue'); router.push('/auth/login'); return; }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setViewMode('checkout');
+  };
+
+  const handlePaymentSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setProcessing(true);
+    setTimeout(() => {
+      setCheckoutStep('success');
+      setProcessing(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 2000);
+  };
+
+  const calculateTotal = () => {
+    if (!listing) return 0;
+    const base = listing.price * (listing.category === 'rent' ? rentalDays : 1);
+    const tax = base * 0.05;
+    const fee = base * 0.03;
+    return { base, tax, fee, total: base + tax + fee };
+  };
+
+  if (loading || !listing) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  const totals = calculateTotal();
+
+  return (
+    <main className="max-w-7xl mx-auto px-6 py-8 pb-24 min-h-screen bg-gray-50 overflow-x-hidden">
+      <div className="flex justify-between items-center mb-8">
+        <button className="flex items-center gap-2 text-gray-500 font-semibold hover:text-emerald-600 transition-colors" onClick={viewMode === 'checkout' ? () => setViewMode('details') : () => router.back()}>
+          <MdArrowBack /> {viewMode === 'checkout' ? 'Back to Details' : 'Back'}
+        </button>
+        {agent && (
+          <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-full shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => router.push(`/profile/${agent.uid}`)}>
+            <img src={agent.photoURL || '/default-avatar.png'} alt="" className="w-10 h-10 rounded-full object-cover" />
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase text-gray-400 font-bold tracking-wider">Listed by</span>
+              <span className="text-sm font-bold text-gray-900 flex items-center gap-1">{agent.displayName} {agent.role === 'agent' && <MdVerified className="text-emerald-500" />}</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <AnimatePresence mode="wait">
+        {viewMode === 'details' ? (
+          <motion.div key="details" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-12">
+            <div>
+              <div className="mb-4 w-full aspect-[16/10] rounded-3xl overflow-hidden bg-gray-200">
+                <img src={listing.images[activeImage]} alt={listing.title} className="w-full h-full object-cover" />
+              </div>
+              <div className="flex gap-4 overflow-x-auto pb-2 mb-8">
+                {listing.images.map((img: string, i: number) => (
+                  <div key={i} className={`w-20 h-20 rounded-xl overflow-hidden cursor-pointer transition-all ${i === activeImage ? 'ring-2 ring-emerald-500 opacity-100' : 'opacity-60 hover:opacity-100'}`} onClick={() => setActiveImage(i)}>
+                    <img src={img} alt="" className="w-full h-full object-cover" />
+                  </div>
+                ))}
+              </div>
+
+              <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-2">{listing.title}</h1>
+              <div className="flex items-center gap-2 text-gray-500 mb-2"><MdLocationOn /> {listing.location}</div>
+              <div className="flex items-center gap-2 mb-8"><MdStar className="text-yellow-400 text-xl" /> <span className="font-bold">4.8</span> <span className="text-gray-400 text-sm">(24 reviews)</span></div>
+
+              <hr className="border-gray-100 my-8" />
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {listing.type === 'house' ? (
+                  <>
+                    <div className="bg-white p-5 rounded-2xl shadow-sm flex flex-col items-center gap-2 font-semibold text-gray-700"><MdBed className="text-2xl text-emerald-500" /> {listing.bedrooms} Beds</div>
+                    <div className="bg-white p-5 rounded-2xl shadow-sm flex flex-col items-center gap-2 font-semibold text-gray-700"><MdBathtub className="text-2xl text-emerald-500" /> {listing.bathrooms} Baths</div>
+                    <div className="bg-white p-5 rounded-2xl shadow-sm flex flex-col items-center gap-2 font-semibold text-gray-700"><MdSquareFoot className="text-2xl text-emerald-500" /> {listing.sqft} sqft</div>
+                  </>
+                ) : (
+                  <>
+                    <div className="bg-white p-5 rounded-2xl shadow-sm flex flex-col items-center gap-2 font-semibold text-gray-700"><MdSpeed className="text-2xl text-emerald-500" /> {listing.mileage} miles</div>
+                    <div className="bg-white p-5 rounded-2xl shadow-sm flex flex-col items-center gap-2 font-semibold text-gray-700"><MdCalendarToday className="text-2xl text-emerald-500" /> {listing.year}</div>
+                    <div className="bg-white p-5 rounded-2xl shadow-sm flex flex-col items-center gap-2 font-semibold text-gray-700"><MdSettings className="text-2xl text-emerald-500" /> Auto</div>
+                  </>
+                )}
+              </div>
+              <hr className="border-gray-100 my-8" />
+
+              <div className="mb-8">
+                <h3 className="text-xl font-bold mb-4">About</h3>
+                <p className="text-gray-600 leading-relaxed">{listing.description}</p>
+              </div>
+
+              <div className="mb-12">
+                <h3 className="text-xl font-bold mb-4">Location</h3>
+                <div className="rounded-3xl overflow-hidden border-4 border-white shadow-lg">
+                  <LoadScript googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || ''}>
+                    <GoogleMap mapContainerStyle={mapContainerStyle} center={{ lat: listing.latitude || 25.7617, lng: listing.longitude || -80.1918 }} zoom={14}>
+                      <Marker position={{ lat: listing.latitude || 25.7617, lng: listing.longitude || -80.1918 }} />
+                    </GoogleMap>
+                  </LoadScript>
+                </div>
+              </div>
+
+              <ReviewsSection listingId={listing.id} currentRating={4.8} totalReviews={24} />
+            </div>
+
+            <aside className="relative">
+              <div className="sticky top-8 bg-white/80 backdrop-blur-xl border border-white p-8 rounded-3xl shadow-xl">
+                <div className="mb-6">
+                  <span className="text-3xl font-extrabold text-gray-900">${listing.price.toLocaleString()}</span>
+                  {listing.category === 'rent' && <span className="text-gray-500 text-lg">/night</span>}
+                </div>
+                <div className="flex flex-col gap-3">
+                  <button className="w-full py-4 bg-emerald-500 text-white rounded-xl font-bold text-lg hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-500/20" onClick={handleStartCheckout}>
+                    {listing.category === 'rent' ? 'Reserve' : 'Buy Now'}
+                  </button>
+                  <button className="w-full py-3 bg-transparent border-2 border-emerald-500 text-emerald-600 rounded-xl font-bold hover:bg-emerald-50 transition-colors flex justify-center items-center gap-2" onClick={() => router.push(`/messaging`)}>
+                    <MdMessage /> Message Agent
+                  </button>
+                </div>
+                <p className="text-center text-xs text-gray-400 mt-4">You won't be charged yet.</p>
+              </div>
+            </aside>
+          </motion.div>
+        ) : (
+          <motion.div key="checkout" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-12 items-start">
+            {checkoutStep === 'form' ? (
+              <>
+                <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-8">Secure Checkout</h2>
+                  {listing.category === 'rent' && (
+                    <div className="mb-8">
+                      <h3 className="text-lg font-bold mb-4">Duration</h3>
+                      <label className="block mb-2 text-sm font-semibold">Number of nights: <strong className="text-emerald-600 text-lg">{rentalDays}</strong></label>
+                      <input type="range" min="1" max="30" value={rentalDays} onChange={(e) => setRentalDays(Number(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-500" />
+                    </div>
+                  )}
+                  <form onSubmit={handlePaymentSubmit}>
+                    <div className="mb-8">
+                      <h3 className="text-lg font-bold mb-4">Contact Info</h3>
+                      <div className="space-y-4">
+                        <div className="flex flex-col gap-1"><label className="text-sm font-bold">Full Name</label><input required className="p-3 border rounded-xl" /></div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="flex flex-col gap-1"><label className="text-sm font-bold">Email</label><input required type="email" className="p-3 border rounded-xl" /></div>
+                          <div className="flex flex-col gap-1"><label className="text-sm font-bold">Phone</label><input required type="tel" className="p-3 border rounded-xl" /></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mb-8">
+                      <h3 className="text-lg font-bold mb-4">Payment Method</h3>
+                      <div className="flex gap-4 mb-4">
+                        {['card', 'bank'].map(m => (
+                          <div key={m} onClick={() => setPaymentMethod(m as any)} className={`flex-1 p-4 border-2 rounded-xl cursor-pointer flex items-center justify-center gap-2 font-bold capitalize ${paymentMethod === m ? 'border-emerald-500 bg-emerald-50 text-emerald-600' : 'border-gray-200'}`}>
+                            {m === 'card' ? <MdCreditCard /> : <MdAccountBalance />} {m}
+                          </div>
+                        ))}
+                      </div>
+                      {paymentMethod === 'card' && (
+                        <div className="space-y-4">
+                          <div className="flex flex-col gap-1"><label className="text-sm font-bold">Card Number</label><input required placeholder="0000 0000 0000 0000" className="p-3 border rounded-xl" /></div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="flex flex-col gap-1"><label className="text-sm font-bold">Expiry</label><input required placeholder="MM/YY" className="p-3 border rounded-xl" /></div>
+                            <div className="flex flex-col gap-1"><label className="text-sm font-bold">CVV</label><input required placeholder="123" className="p-3 border rounded-xl" /></div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <button type="submit" disabled={processing} className="w-full py-4 bg-gray-900 text-white rounded-xl font-bold text-lg hover:bg-black transition-colors disabled:opacity-70">
+                      {processing ? 'Processing...' : `Pay $${totals.total.toLocaleString()}`}
+                    </button>
+                  </form>
+                </div>
+                <aside className="sticky top-8 bg-white/80 backdrop-blur-xl border border-white p-8 rounded-3xl shadow-xl">
+                  <h3 className="text-xl font-bold mb-6">Order Summary</h3>
+                  <div className="flex gap-4 mb-6 pb-6 border-b border-gray-100">
+                    <img src={listing.images[0]} alt="" className="w-20 h-16 rounded-lg object-cover" />
+                    <div><h4 className="font-bold">{listing.title}</h4><p className="text-sm text-gray-500">{listing.category === 'rent' ? `${rentalDays} nights` : 'One-time payment'}</p></div>
+                  </div>
+                  <div className="space-y-2 text-sm text-gray-600">
+                    <div className="flex justify-between"><span>Base</span><span>${totals.base.toLocaleString()}</span></div>
+                    <div className="flex justify-between"><span>Tax (5%)</span><span>${totals.tax.toLocaleString()}</span></div>
+                    <div className="flex justify-between"><span>Fee (3%)</span><span>${totals.fee.toLocaleString()}</span></div>
+                    <div className="flex justify-between font-bold text-lg text-gray-900 pt-2 border-t mt-2"><span>Total</span><span>${totals.total.toLocaleString()}</span></div>
+                  </div>
+                </aside>
+              </>
+            ) : (
+              <div className="col-span-full flex flex-col items-center justify-center py-20 text-center">
+                <MdCheckCircle className="text-6xl text-emerald-500 mb-4" />
+                <h2 className="text-3xl font-extrabold text-gray-900 mb-2">Payment Successful!</h2>
+                <p className="text-gray-500 mb-8">Ref: REF-{Math.random().toString(36).substr(2, 9).toUpperCase()}</p>
+                <div className="flex gap-4">
+                  <button className="px-6 py-3 bg-emerald-500 text-white rounded-xl font-bold" onClick={() => { setViewMode('details'); setCheckoutStep('form'); }}>Return to Listing</button>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </main>
+  );
+}
+
+
+
