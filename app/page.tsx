@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
-import { Zap, Radio, Shield, Check, Star, Menu, Search, Home, Briefcase, MapPin , Car} from 'lucide-react';
+import { Zap, Radio, Check, Star, Menu, Search, Home, Briefcase, MapPin , Car, Shield } from 'lucide-react';
 import Head from 'next/head';
 
 // --- Utility Components ---
@@ -47,47 +47,37 @@ const Navbar = () => {
   );
 };
 
-// --- 2. FIXED Hero Section ---
+// --- 2. UPDATED Hero Section ---
 const HeroSection = () => {
   const containerRef = useRef(null);
   
-  // Tall container for scroll space
   const { scrollYProgress } = useScroll({
     target: containerRef,
     offset: ["start start", "end end"],
   });
 
-  // --- Animation Logic ---
-
-  // 1. Text: Fades out quickly (0% to 20% scroll)
+  // 1. Text Animation
   const textOpacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
   const textScale = useTransform(scrollYProgress, [0, 0.2], [1, 0.8]);
   const textY = useTransform(scrollYProgress, [0, 0.2], [0, -50]);
 
-  // 2. Phone Position (Y-Axis): 
-  // Starts 85% down (just peeking). Moves to 0% (Center) by 40% scroll.
-  const phoneY = useTransform(scrollYProgress, 
-    [0, 0.4, 0.8], 
-    ["85%", "0%", "0%"] 
-  );
-
-  // 3. Phone Scale:
-  // Stays normal until it hits center, then shrinks slightly to reveal buttons
-  const phoneScale = useTransform(scrollYProgress, 
-    [0.4, 0.6], 
-    [1, 0.85] 
-  );
-
-  // 4. Buttons (The Modals):
-  // They start centered behind the phone.
-  // When phone shrinks (0.4 to 0.6), they slide OUT to left and right.
-  const btnOpacity = useTransform(scrollYProgress, [0.45, 0.55], [0, 1]);
+  // 2. Phone Position (Y-Axis)
+  const phoneY = useTransform(scrollYProgress, [0, 0.4, 0.8], ["85%", "0%", "0%"]);
   
-  // Left Button (App Store) moves Left
-  const leftBtnX = useTransform(scrollYProgress, [0.45, 0.6], [0, -180]);
-  
-  // Right Button (Play Store) moves Right
-  const rightBtnX = useTransform(scrollYProgress, [0.45, 0.6], [0, 180]);
+  // 3. Phone Scale (Shrink to reveal side modals)
+  const phoneScale = useTransform(scrollYProgress, [0.4, 0.6], [1, 0.9]);
+
+  // 4. App Store Buttons (Fade in from BOTTOM)
+  const btnOpacity = useTransform(scrollYProgress, [0.6, 0.75], [0, 1]);
+  const btnY = useTransform(scrollYProgress, [0.6, 0.75], [100, 0]); // Move up from bottom
+
+  // 5. Side Modals Animation (Pop out from behind phone to sides)
+  const modalOpacity = useTransform(scrollYProgress, [0.45, 0.6], [0, 1]);
+  // Left side modals move left, Right side modals move right
+  const leftModalX = useTransform(scrollYProgress, [0.45, 0.6], [0, -260]); 
+  const rightModalX = useTransform(scrollYProgress, [0.45, 0.6], [0, 260]);
+  const leftModalX2 = useTransform(scrollYProgress, [0.45, 0.6], [0, -290]); 
+  const rightModalX2 = useTransform(scrollYProgress, [0.45, 0.6], [0, 290]);
 
   return (
     <div ref={containerRef} className="relative h-[300vh] bg-white w-full">
@@ -97,7 +87,7 @@ const HeroSection = () => {
       {/* Sticky Viewport */}
       <div className="sticky top-0 h-screen w-full overflow-hidden flex flex-col items-center justify-center">
         
-        {/* --- TEXT LAYER (Top Half) --- */}
+        {/* --- TEXT LAYER --- */}
         <motion.div 
           style={{ opacity: textOpacity, scale: textScale, y: textY }}
           className="absolute top-[15%] z-10 text-center px-4 max-w-4xl mx-auto w-full"
@@ -122,106 +112,162 @@ const HeroSection = () => {
         </motion.div>
 
 
-        {/* --- ANIMATION LAYER (Center) --- */}
+        {/* --- ANIMATION LAYER --- */}
         <div className="relative w-full flex items-center justify-center h-full">
             
-            {/* APP STORE BUTTON (Left) */}
+            {/* APP STORE BUTTONS (Bottom) - Now positioned absolute relative to center */}
             <motion.div 
-                style={{ opacity: btnOpacity, x: leftBtnX }}
-                className="absolute z-10" // Behind phone (z-20)
+                style={{ opacity: btnOpacity, y: btnY }}
+                className="absolute top-[85%] z-10 flex gap-4" 
             >
-                <button className="bg-gray-900 text-white w-40 py-3 rounded-2xl flex flex-col items-center justify-center shadow-xl hover:bg-gray-800 transition-colors border border-gray-800">
-                    <i className="fab fa-apple text-3xl mb-1"></i> 
-                    <p className="text-[10px] uppercase text-gray-400 leading-none">Download on</p>
-                    <p className="font-bold text-xs leading-none mt-1">App Store</p>
-                </button>
+                <a href="#" className="bg-gray-900 hover:bg-gray-800 text-white px-8 py-3 rounded-full font-medium text-lg shadow-lg flex items-center gap-2 transition-transform hover:-translate-y-1">
+                    <i className="fab fa-apple text-xl"></i> Download on iOS
+                </a>
+                <a href="#" className="bg-white border border-gray-200 hover:bg-gray-50 text-gray-900 px-8 py-3 rounded-full font-medium text-lg shadow-sm flex items-center gap-2 transition-transform hover:-translate-y-1">
+                    <i className="fab fa-google-play text-emerald-600 text-xl"></i> Get it on Android
+                </a>
             </motion.div>
 
-            {/* GOOGLE PLAY BUTTON (Right) */}
-            <motion.div 
-                style={{ opacity: btnOpacity, x: rightBtnX }}
-                className="absolute z-10" // Behind phone (z-20)
-            >
-                <button className="bg-white text-gray-900 w-40 py-3 rounded-2xl flex flex-col items-center justify-center shadow-xl hover:bg-gray-50 transition-colors border border-gray-200">
-                    <i className="fab fa-google-play text-2xl text-emerald-600 mb-1"></i>
-                    <p className="text-[10px] uppercase text-gray-400 leading-none">Get it on</p>
-                    <p className="font-bold text-xs leading-none mt-1">Google Play</p>
-                </button>
+            {/* --- SIDE POP-UP MODALS --- */}
+            
+            {/* Left Side Group */}
+            <motion.div style={{ opacity: modalOpacity, x: leftModalX }} className="absolute z-10 top-[20%]">
+                <div className="bg-white p-3 rounded-2xl shadow-xl border border-gray-100 flex items-center gap-3 w-60">
+                    <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600"><i className="fas fa-home"></i></div>
+                    <div><p className="text-[10px] text-gray-400 font-bold uppercase">Just Listed</p><p className="font-bold text-sm text-gray-900">Brufut Heights Villa</p></div>
+                </div>
+            </motion.div>
+            <motion.div style={{ opacity: modalOpacity, x: leftModalX2 }} className="absolute z-10 top-[35%]">
+                 <div className="bg-white p-3 rounded-2xl shadow-xl border border-gray-100 flex items-center gap-3 w-64">
+                    <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center text-amber-600"><i className="fas fa-comments"></i></div>
+                    <div><p className="text-[10px] text-gray-400 font-bold uppercase">New Message</p><p className="font-bold text-sm text-gray-900">Is the price negotiable?</p></div>
+                </div>
+            </motion.div>
+            <motion.div style={{ opacity: modalOpacity, x: leftModalX }} className="absolute z-10 top-[50%]">
+                 <div className="bg-white p-3 rounded-2xl shadow-xl border border-gray-100 flex items-center gap-3 w-60">
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600"><i className="fas fa-car"></i></div>
+                    <div><p className="text-[10px] text-gray-400 font-bold uppercase">Price Drop</p><p className="font-bold text-sm text-gray-900">Lexus LX 570</p></div>
+                </div>
+            </motion.div>
+            <motion.div style={{ opacity: modalOpacity, x: leftModalX2 }} className="absolute z-10 top-[65%]">
+                 <div className="bg-white p-3 rounded-2xl shadow-xl border border-gray-100 flex items-center gap-3 w-64">
+                    <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-600"><i className="fas fa-check-circle"></i></div>
+                    <div><p className="text-[10px] text-gray-400 font-bold uppercase">Verified</p><p className="font-bold text-sm text-gray-900">Bijilo Apartments</p></div>
+                </div>
             </motion.div>
 
-            {/* THE PHONE */}
+            {/* Right Side Group */}
+            <motion.div style={{ opacity: modalOpacity, x: rightModalX }} className="absolute z-10 top-[25%]">
+                 <div className="bg-white p-3 rounded-2xl shadow-xl border border-gray-100 flex items-center gap-3 w-60">
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600"><i className="fas fa-car"></i></div>
+                    <div><p className="text-[10px] text-gray-400 font-bold uppercase">Vehicle Sold</p><p className="font-bold text-sm text-gray-900">Toyota Hilux 2022</p></div>
+                </div>
+            </motion.div>
+            <motion.div style={{ opacity: modalOpacity, x: rightModalX2 }} className="absolute z-10 top-[40%]">
+                 <div className="bg-white p-3 rounded-2xl shadow-xl border border-gray-100 flex items-center gap-3 w-64">
+                    <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600"><i className="fas fa-hand-holding-usd"></i></div>
+                    <div><p className="text-[10px] text-gray-400 font-bold uppercase">Offer Received</p><p className="font-bold text-sm text-gray-900">Senegambia Apt.</p></div>
+                </div>
+            </motion.div>
+            <motion.div style={{ opacity: modalOpacity, x: rightModalX }} className="absolute z-10 top-[55%]">
+                 <div className="bg-white p-3 rounded-2xl shadow-xl border border-gray-100 flex items-center gap-3 w-60">
+                    <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center text-red-600"><i className="fas fa-heart"></i></div>
+                    <div><p className="text-[10px] text-gray-400 font-bold uppercase">Saved</p><p className="font-bold text-sm text-gray-900">Kerr Serign Land</p></div>
+                </div>
+            </motion.div>
+            <motion.div style={{ opacity: modalOpacity, x: rightModalX2 }} className="absolute z-10 top-[70%]">
+                 <div className="bg-white p-3 rounded-2xl shadow-xl border border-gray-100 flex items-center gap-3 w-64">
+                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600"><i className="fas fa-user-check"></i></div>
+                    <div><p className="text-[10px] text-gray-400 font-bold uppercase">Agent Joined</p><p className="font-bold text-sm text-gray-900">Modou Properties</p></div>
+                </div>
+            </motion.div>
+
+            {/* THE PHONE - EXACT REFERENCE UI */}
             <motion.div 
                 style={{ y: phoneY, scale: phoneScale }}
-                className="relative z-20 w-[300px] h-[650px] shadow-2xl rounded-[3.5rem] border-[8px] border-gray-900 bg-gray-900 overflow-hidden"
+                className="relative z-20 w-[320px] h-[650px] shadow-2xl rounded-[3rem] border-[8px] border-gray-900 bg-gray-900 overflow-hidden"
             >
                 {/* Dynamic Island */}
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-7 bg-black rounded-b-2xl z-30"></div>
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-7 bg-black rounded-b-2xl z-30"></div>
                 
-                {/* Screen Content */}
-                <div className="w-full h-full bg-gray-50 flex flex-col relative font-sans">
-                     {/* Header */}
-                     <div className="pt-12 px-5 pb-4 bg-white flex justify-between items-center shadow-sm z-10">
-                        <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-xs border border-emerald-200">AS</div>
+                {/* Screen Content - Adapted to Emerald Theme */}
+                <div className="w-full h-full bg-gray-50 flex flex-col relative font-sans overflow-y-auto no-scrollbar">
+                     
+                     {/* 1. Header */}
+                     <div className="pt-12 px-5 pb-4 bg-white flex justify-between items-center sticky top-0 z-20">
+                        <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden border border-gray-100">
+                                <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80" alt="Avatar" className="w-full h-full object-cover"/>
+                            </div>
                             <div>
-                                <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">Current Location</p>
-                                <p className="text-xs font-bold text-gray-900 flex items-center gap-1">Senegambia, GM <span className="text-emerald-500 text-[10px]">▼</span></p>
+                                <p className="text-[10px] text-gray-400 font-bold uppercase">Welcome back</p>
+                                <p className="text-sm font-bold text-gray-900">Alieu S.</p>
                             </div>
                         </div>
-                        <div className="w-9 h-9 bg-gray-50 rounded-full flex items-center justify-center border border-gray-100">
-                            <Menu size={18} className="text-gray-600"/>
+                        <button className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition">
+                             <i className="fas fa-bell text-xs"></i>
+                        </button>
+                     </div>
+
+                     {/* 2. Search */}
+                     <div className="px-5 mb-4 bg-white pb-2">
+                         <div className="relative">
+                             <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                             <input type="text" placeholder="Search homes or cars..." className="w-full bg-gray-100 border-none rounded-xl py-3 pl-10 text-sm focus:ring-2 focus:ring-emerald-500 text-gray-900 placeholder-gray-400 outline-none" />
+                         </div>
+                     </div>
+
+                     {/* 3. Categories */}
+                     <div className="px-5 mb-6">
+                         <div className="flex gap-3 overflow-x-auto pb-2 hide-scrollbar">
+                            <button className="flex-shrink-0 bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-md shadow-emerald-200">All</button>
+                            <button className="flex-shrink-0 bg-white border border-gray-100 text-gray-600 px-4 py-2 rounded-xl text-xs font-medium">Homes</button>
+                            <button className="flex-shrink-0 bg-white border border-gray-100 text-gray-600 px-4 py-2 rounded-xl text-xs font-medium">Cars</button>
+                            <button className="flex-shrink-0 bg-white border border-gray-100 text-gray-600 px-4 py-2 rounded-xl text-xs font-medium">Land</button>
+                         </div>
+                     </div>
+
+                     {/* 4. Content Feed */}
+                     <div className="px-5 space-y-4 pb-24">
+                        {/* Card 1 */}
+                        <div className="bg-white rounded-2xl p-3 shadow-sm border border-gray-100">
+                            <div className="relative h-32 rounded-xl overflow-hidden mb-3">
+                                <img src="https://images.unsplash.com/photo-1600596542815-60c37c6525fa?auto=format&fit=crop&w=500&q=80" alt="House" className="w-full h-full object-cover" />
+                                <span className="absolute top-2 right-2 bg-white/95 backdrop-blur px-2 py-1 rounded-md text-[10px] font-bold text-emerald-600 shadow-sm">FOR SALE</span>
+                            </div>
+                            <h3 className="font-bold text-gray-900 text-sm mb-1">Modern Villa in Brusubi</h3>
+                            <p className="text-emerald-500 font-bold text-sm mb-2">$185,000</p>
+                            <div className="flex items-center gap-3 text-xs text-gray-400">
+                                <span className="flex items-center gap-1"><i className="fas fa-bed text-[10px]"></i> 4</span>
+                                <span className="flex items-center gap-1"><i className="fas fa-bath text-[10px]"></i> 3</span>
+                                <span className="flex items-center gap-1"><i className="fas fa-ruler-combined text-[10px]"></i> 250m²</span>
+                            </div>
+                        </div>
+
+                        {/* Card 2 */}
+                        <div className="bg-white rounded-2xl p-3 shadow-sm border border-gray-100">
+                            <div className="relative h-32 rounded-xl overflow-hidden mb-3">
+                                <img src="https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=500&q=80" alt="Car" className="w-full h-full object-cover" />
+                                <span className="absolute top-2 right-2 bg-white/95 backdrop-blur px-2 py-1 rounded-md text-[10px] font-bold text-blue-500 shadow-sm">RENTAL</span>
+                            </div>
+                            <h3 className="font-bold text-gray-900 text-sm mb-1">Toyota Land Cruiser</h3>
+                            <p className="text-emerald-500 font-bold text-sm mb-2">$85 / day</p>
+                            <div className="flex items-center gap-3 text-xs text-gray-400">
+                                <span className="flex items-center gap-1"><i className="fas fa-gas-pump text-[10px]"></i> Diesel</span>
+                                <span className="flex items-center gap-1"><i className="fas fa-cog text-[10px]"></i> Auto</span>
+                            </div>
                         </div>
                      </div>
-
-                     {/* Search */}
-                     <div className="px-5 pt-4 pb-2">
-                         <div className="bg-white border border-gray-200 rounded-2xl p-3.5 flex items-center gap-3 shadow-sm">
-                             <Search size={18} className="text-gray-400"/>
-                             <span className="text-sm text-gray-400">Find homes, cars...</span>
-                         </div>
-                     </div>
-
-                     {/* Main Scroll Content */}
-                     <div className="flex-1 overflow-hidden px-5 space-y-4 pb-24 pt-2">
-                         {/* Card 1 */}
-                         <div className="w-full bg-white rounded-3xl p-3 shadow-sm border border-gray-100 group">
-                             <div className="w-full h-32 bg-gray-100 rounded-2xl mb-3 relative overflow-hidden">
-                                <img src="https://images.unsplash.com/photo-1600596542815-60c37c6525fa?auto=format&fit=crop&w=500&q=80" className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500" alt="Home" />
-                                <div className="absolute top-3 right-3 bg-white/95 backdrop-blur px-3 py-1.5 rounded-full text-[10px] font-bold text-emerald-600 shadow-sm">D8.5M</div>
-                             </div>
-                             <div className="flex justify-between items-start px-1">
-                                 <div>
-                                     <h3 className="font-bold text-sm text-gray-900">Brusubi Phase 2</h3>
-                                     <p className="text-[10px] text-gray-500 mt-1">4 Beds • 3 Baths • Pool</p>
-                                 </div>
-                                 <div className="w-7 h-7 rounded-full bg-gray-50 flex items-center justify-center border border-gray-100">
-                                     <Star size={12} className="text-gray-400"/>
-                                 </div>
-                             </div>
-                         </div>
-
-                         {/* Card 2 */}
-                         <div className="w-full bg-white rounded-3xl p-3 shadow-sm border border-gray-100">
-                             <div className="w-full h-28 bg-gray-100 rounded-2xl mb-3 relative overflow-hidden">
-                                <img src="https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=500&q=80" className="object-cover w-full h-full" alt="Car" />
-                                <div className="absolute top-3 right-3 bg-white/95 backdrop-blur px-3 py-1.5 rounded-full text-[10px] font-bold text-emerald-600 shadow-sm">D1.2M</div>
-                             </div>
-                             <div className="px-1">
-                                <h3 className="font-bold text-sm text-gray-900">Toyota Prado 2021</h3>
-                                <p className="text-[10px] text-gray-500 mt-1">48,000 km • Automatic</p>
-                             </div>
-                         </div>
-                     </div>
                      
-                     {/* Floating Tab Bar */}
-                     <div className="absolute bottom-6 left-5 right-5 bg-gray-900/90 backdrop-blur-xl rounded-[2rem] h-16 text-white flex justify-between items-center px-6 shadow-2xl shadow-emerald-900/20">
-                         <Home size={22} className="text-emerald-400" />
-                         <Search size={22} className="text-gray-500" />
-                         <div className="w-12 h-12 bg-emerald-500 rounded-full -mt-10 border-[6px] border-gray-50 flex items-center justify-center shadow-lg transform active:scale-95 transition-transform">
-                             <span className="text-2xl font-light text-white mb-1">+</span>
-                         </div>
-                         <Briefcase size={22} className="text-gray-500" />
-                         <div className="w-7 h-7 rounded-full bg-gray-700 border border-gray-500"></div>
+                     {/* 5. Bottom Nav */}
+                     <div className="absolute bottom-5 left-4 right-4 bg-gray-900/95 text-white rounded-2xl p-4 flex justify-between items-center backdrop-blur-xl shadow-2xl">
+                        <i className="fas fa-home text-emerald-400 text-lg"></i>
+                        <i className="far fa-compass text-gray-500 text-lg"></i>
+                        <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center -mt-8 border-4 border-gray-50 shadow-lg">
+                            <i className="fas fa-plus text-white text-sm"></i>
+                        </div>
+                        <i className="far fa-heart text-gray-500 text-lg"></i>
+                        <i className="far fa-user text-gray-500 text-lg"></i>
                      </div>
                 </div>
             </motion.div>
@@ -316,37 +362,87 @@ const HavanaExperienceBanner = () => {
     );
 };
 
-// --- 6. Features Section (Unchanged) ---
+// --- 6. UPDATED Features Section ("Why Choose Havanah") ---
 const FeaturesSection = () => {
   return (
     <section className="py-24 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <span className="text-emerald-500 font-bold tracking-widest text-sm uppercase">Why Choose Havanah</span>
-          <h2 className="text-3xl md:text-5xl font-bold mt-2 text-gray-900">Trade with absolute confidence</h2>
+          <span className="text-emerald-500 font-semibold tracking-wider text-sm uppercase">Why Choose Havanah</span>
+          <h2 className="font-display text-3xl md:text-4xl font-bold mt-2 text-gray-900">Everything you need to trade with confidence</h2>
         </div>
+        
+        {/* REPLACED GRID STRUCTURE */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2 bg-emerald-50 rounded-[2.5rem] p-10 relative overflow-hidden border border-emerald-100 group">
-             <div className="relative z-10 max-w-md">
-                <div className="w-14 h-14 bg-white text-emerald-600 rounded-2xl flex items-center justify-center mb-6 shadow-sm">
-                  <Shield size={24} />
+            {/* Box 1: Verified Listings */}
+            <div className="md:col-span-2 bg-purple-50 rounded-3xl p-8 md:p-12 relative overflow-hidden border border-purple-100">
+                <div className="relative z-10 max-w-md">
+                    <div className="w-12 h-12 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center mb-6 text-xl shadow-sm">
+                        <i className="fas fa-shield-alt"></i>
+                    </div>
+                    <h3 className="text-2xl font-bold mb-4 text-gray-900">Verified Listings Only</h3>
+                    <p className="text-gray-600 mb-6">We manually verify every vehicle and property listed on Havanah to ensure you never encounter scams or fake listings.</p>
+                    <a href="#" className="text-purple-600 font-medium hover:underline flex items-center gap-1">Learn about our verification process <i className="fas fa-arrow-right text-xs"></i></a>
                 </div>
-                <h3 className="text-2xl font-bold mb-4 text-gray-900">Verified Listings Only</h3>
-                <p className="text-gray-600 mb-6 leading-relaxed">We manually verify every vehicle and property listed on Havanah to ensure you never encounter scams or fake listings in The Gambia.</p>
-             </div>
-             <div className="absolute right-0 top-1/2 -translate-y-1/2 w-64 h-64 bg-emerald-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
-          </div>
+                {/* Decorative Image/Pattern */}
+                <div className="absolute -right-10 top-1/2 -translate-y-1/2 w-64 h-64 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-50"></div>
+            </div>
 
-          <div className="bg-amber-50 rounded-[2.5rem] p-10 relative overflow-hidden border border-amber-100">
-             <div className="w-14 h-14 bg-white text-amber-500 rounded-2xl flex items-center justify-center mb-6 shadow-sm">
-                 <div className="relative">
-                    <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></div>
-                    <i className="fas fa-comments text-lg"></i>
-                 </div>
-             </div>
-             <h3 className="text-xl font-bold mb-3 text-gray-900">Direct Chat</h3>
-             <p className="text-gray-600 text-sm mb-6">Negotiate directly with sellers or agents using our secure in-app messaging system.</p>
-          </div>
+            {/* Box 2: Direct Chat */}
+            <div className="bg-blue-50 rounded-3xl p-8 relative overflow-hidden border border-blue-100">
+                <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mb-6 text-xl shadow-sm">
+                    <i className="fas fa-comments"></i>
+                </div>
+                <h3 className="text-xl font-bold mb-3 text-gray-900">Direct Chat</h3>
+                <p className="text-gray-600 text-sm mb-6">Negotiate directly with sellers or agents using our secure in-app messaging system.</p>
+                <div className="mt-8 bg-white rounded-2xl p-4 shadow-lg transform rotate-3 border border-gray-100">
+                    <div className="flex items-center gap-3 mb-3">
+                        <div className="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center text-white text-xs font-bold">A</div>
+                        <div className="bg-gray-100 p-2 rounded-lg rounded-tl-none text-xs text-gray-800">Is the price negotiable?</div>
+                    </div>
+                    <div className="flex items-center gap-3 flex-row-reverse">
+                        <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold">Me</div>
+                        <div className="bg-blue-500 p-2 rounded-lg rounded-tr-none text-xs text-white">Yes, open to offers!</div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Box 3: Smart Search */}
+            <div className="bg-orange-50 rounded-3xl p-8 border border-orange-100">
+                <div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center mb-6 text-xl shadow-sm">
+                    <i className="fas fa-search-location"></i>
+                </div>
+                <h3 className="text-xl font-bold mb-3 text-gray-900">Smart Search</h3>
+                <p className="text-gray-600 text-sm">Filter by location, price, make, model, or number of bedrooms to find your perfect match instantly.</p>
+            </div>
+
+            {/* Box 4: Seller Dashboard */}
+            <div className="md:col-span-2 bg-emerald-50 rounded-3xl p-8 border border-emerald-100 flex flex-col md:flex-row items-center gap-8">
+                <div className="flex-1">
+                    <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mb-6 text-xl shadow-sm">
+                        <i className="fas fa-chart-line"></i>
+                    </div>
+                    <h3 className="text-xl font-bold mb-3 text-gray-900">Seller Dashboard</h3>
+                    <p className="text-gray-600 text-sm mb-4">Track views, messages, and engagement on your listings. Perfect for agents and dealerships.</p>
+                    <button className="bg-emerald-600 text-white px-5 py-2 rounded-full text-sm font-medium hover:bg-emerald-700 transition shadow-lg shadow-emerald-200">View Demo</button>
+                </div>
+                <div className="flex-1 w-full">
+                    <div className="bg-white rounded-xl p-4 shadow-lg w-full border border-gray-100">
+                        <div className="flex justify-between items-end h-24 gap-2">
+                            <div className="w-1/5 bg-emerald-100 rounded-t-lg h-12"></div>
+                            <div className="w-1/5 bg-emerald-200 rounded-t-lg h-16"></div>
+                            <div className="w-1/5 bg-emerald-500 rounded-t-lg h-24 relative group">
+                                <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] px-2 py-1 rounded opacity-100 transition shadow-sm">1.2k Views</div>
+                            </div>
+                            <div className="w-1/5 bg-emerald-200 rounded-t-lg h-14"></div>
+                            <div className="w-1/5 bg-emerald-100 rounded-t-lg h-10"></div>
+                        </div>
+                        <div className="border-t border-gray-100 mt-2 pt-2 flex justify-between text-[10px] text-gray-400 font-medium">
+                            <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
       </div>
     </section>
@@ -616,7 +712,7 @@ export default function HomePage() {
       <Navbar />
       
       <main>
-        {/* REVISED HERO: Fixed overlap + Side popping buttons */}
+        {/* REVISED HERO: App store buttons fade up from bottom + 8 Side Modals */}
         <HeroSection />
         
         {/* Infinite Scroll Marquee */}
@@ -628,7 +724,7 @@ export default function HomePage() {
         {/* Experience Banner */}
         <HavanaExperienceBanner />
         
-        {/* Features */}
+        {/* REPLACED Features Section (Matches Reference) */}
         <FeaturesSection />
         
         {/* Vertical Scroller */}
