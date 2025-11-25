@@ -1,53 +1,18 @@
 'use client';
 
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
-import { Zap, Radio, Check, Star, Menu, Search, Home, Briefcase, MapPin , Car, Shield } from 'lucide-react';
+import { 
+  Zap, Radio, Check, Star, Menu, Search, Home, Briefcase, MapPin, 
+  Car, Shield, ShieldCheck, MessageSquareText, BarChart3, CheckCircle2, 
+  ArrowRight, X 
+} from 'lucide-react';
 import Head from 'next/head';
 
 // --- Utility Components ---
 const SectionSpacer = () => <div className="h-24 md:h-32 bg-transparent" />;
 
-// --- 1. Navbar ---
-const Navbar = () => {
-  const [isScrolled, setIsScrolled] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  return (
-    <nav className={`fixed w-full z-50 top-0 transition-all duration-300 ${
-      isScrolled ? 'bg-white/80 backdrop-blur-md border-b border-emerald-100 py-3' : 'bg-transparent py-5'
-    }`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center">
-          <div className="flex-shrink-0 flex items-center gap-2">
-            <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center text-white font-bold shadow-lg shadow-emerald-200">H</div>
-            <span className="font-display font-bold text-xl tracking-tight text-gray-900">Havanah</span>
-          </div>
-          <div className="hidden md:flex space-x-8">
-            {['Real Estate', 'Vehicles', 'Pricing', 'About'].map((item) => (
-              <a key={item} href="#" className="text-gray-500 hover:text-emerald-600 font-medium transition-colors text-sm">
-                {item}
-              </a>
-            ))}
-          </div>
-          <div className="flex items-center gap-4">
-            <button className="hidden md:block text-gray-500 hover:text-emerald-600">Log In</button>
-            <a href="#" className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2.5 rounded-full text-sm font-bold transition-transform hover:scale-105 shadow-xl shadow-emerald-200">
-              Get Started
-            </a>
-          </div>
-        </div>
-      </div>
-    </nav>
-  );
-};
-
-// --- 2. UPDATED Hero Section ---
+// --- 1. UPDATED Hero Section (Navbar Removed) ---
 const HeroSection = () => {
   const containerRef = useRef(null);
   
@@ -71,37 +36,29 @@ const HeroSection = () => {
   const btnOpacity = useTransform(scrollYProgress, [0.6, 0.75], [0, 1]);
   const btnY = useTransform(scrollYProgress, [0.6, 0.75], [100, 0]);
 
-  // 5. Side Modals Animation (Smoother Logic)
-  // Define animation start/end points
+  // 5. Side Modals Animation
   const animStart = 0.4;
   const animEnd = 0.65;
+  const modalOpacity = useTransform(scrollYProgress, [animStart, animStart + 0.1], [0, 1]); 
+  const modalScale = useTransform(scrollYProgress, [animStart, animEnd], [0.5, 1]); 
 
-  // Base visibility and scaling
-  const modalOpacity = useTransform(scrollYProgress, [animStart, animStart + 0.1], [0, 1]); // Fade in
-  const modalScale = useTransform(scrollYProgress, [animStart, animEnd], [0.5, 1]); // Grow from small to normal
-
-  // Left side motion (Fan out left + negative rotation)
   const leftX = useTransform(scrollYProgress, [animStart, animEnd], [0, -280]); 
   const leftX2 = useTransform(scrollYProgress, [animStart, animEnd], [0, -320]);
-  const leftRotate = useTransform(scrollYProgress, [animStart, animEnd], [0, -8]); // Tilt left
+  const leftRotate = useTransform(scrollYProgress, [animStart, animEnd], [0, -8]); 
 
-  // Right side motion (Fan out right + positive rotation)
   const rightX = useTransform(scrollYProgress, [animStart, animEnd], [0, 280]);
   const rightX2 = useTransform(scrollYProgress, [animStart, animEnd], [0, 320]);
-  const rightRotate = useTransform(scrollYProgress, [animStart, animEnd], [0, 8]); // Tilt right
+  const rightRotate = useTransform(scrollYProgress, [animStart, animEnd], [0, 8]); 
 
   return (
     <div ref={containerRef} className="relative h-[300vh] bg-white w-full">
-      {/* Scrollbar hiding styles */}
       <style jsx global>{`
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
-      {/* Background Grid */}
       <div className="fixed inset-0 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:20px_20px] opacity-[0.05] pointer-events-none" />
       
-      {/* Sticky Viewport */}
       <div className="sticky top-0 h-screen w-full overflow-hidden flex flex-col items-center justify-center">
         
         {/* --- TEXT LAYER --- */}
@@ -128,20 +85,19 @@ const HeroSection = () => {
           </p>
         </motion.div>
 
-
         {/* --- ANIMATION LAYER --- */}
         <div className="relative w-full flex items-center justify-center h-full">
             
-            {/* APP STORE BUTTONS (Bottom) */}
+            {/* APP STORE BUTTONS */}
             <motion.div 
                 style={{ opacity: btnOpacity, y: btnY }}
                 className="absolute top-[85%] z-10 flex gap-4" 
             >
                 <a href="#" className="bg-gray-900 hover:bg-gray-800 text-white px-8 py-3 rounded-full font-medium text-lg shadow-lg flex items-center gap-2 transition-transform hover:-translate-y-1">
-                    <i className="fab fa-apple text-xl"></i> Download on iOS
+                    Download on iOS
                 </a>
                 <a href="#" className="bg-white border border-gray-200 hover:bg-gray-50 text-gray-900 px-8 py-3 rounded-full font-medium text-lg shadow-sm flex items-center gap-2 transition-transform hover:-translate-y-1">
-                    <i className="fab fa-google-play text-emerald-600 text-xl"></i> Get it on Android
+                    Get it on Android
                 </a>
             </motion.div>
 
@@ -149,25 +105,25 @@ const HeroSection = () => {
             {/* Left Side Group */}
             <motion.div style={{ opacity: modalOpacity, x: leftX, scale: modalScale, rotate: leftRotate }} className="absolute z-10 top-[20%] origin-right">
                 <div className="bg-white p-3 rounded-2xl shadow-xl border border-gray-100 flex items-center gap-3 w-60">
-                    <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600"><i className="fas fa-home"></i></div>
+                    <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600"><Home size={18} /></div>
                     <div><p className="text-[10px] text-gray-400 font-bold uppercase">Just Listed</p><p className="font-bold text-sm text-gray-900">Brufut Heights Villa</p></div>
                 </div>
             </motion.div>
             <motion.div style={{ opacity: modalOpacity, x: leftX2, scale: modalScale, rotate: leftRotate }} className="absolute z-10 top-[35%] origin-right">
                  <div className="bg-white p-3 rounded-2xl shadow-xl border border-gray-100 flex items-center gap-3 w-64">
-                    <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center text-amber-600"><i className="fas fa-comments"></i></div>
+                    <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center text-amber-600"><MessageSquareText size={18} /></div>
                     <div><p className="text-[10px] text-gray-400 font-bold uppercase">New Message</p><p className="font-bold text-sm text-gray-900">Is the price negotiable?</p></div>
                 </div>
             </motion.div>
             <motion.div style={{ opacity: modalOpacity, x: leftX, scale: modalScale, rotate: leftRotate }} className="absolute z-10 top-[50%] origin-right">
                  <div className="bg-white p-3 rounded-2xl shadow-xl border border-gray-100 flex items-center gap-3 w-60">
-                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600"><i className="fas fa-car"></i></div>
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600"><Car size={18} /></div>
                     <div><p className="text-[10px] text-gray-400 font-bold uppercase">Price Drop</p><p className="font-bold text-sm text-gray-900">Lexus LX 570</p></div>
                 </div>
             </motion.div>
             <motion.div style={{ opacity: modalOpacity, x: leftX2, scale: modalScale, rotate: leftRotate }} className="absolute z-10 top-[65%] origin-right">
                  <div className="bg-white p-3 rounded-2xl shadow-xl border border-gray-100 flex items-center gap-3 w-64">
-                    <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-600"><i className="fas fa-check-circle"></i></div>
+                    <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-600"><ShieldCheck size={18} /></div>
                     <div><p className="text-[10px] text-gray-400 font-bold uppercase">Verified</p><p className="font-bold text-sm text-gray-900">Bijilo Apartments</p></div>
                 </div>
             </motion.div>
@@ -175,29 +131,17 @@ const HeroSection = () => {
             {/* Right Side Group */}
             <motion.div style={{ opacity: modalOpacity, x: rightX, scale: modalScale, rotate: rightRotate }} className="absolute z-10 top-[25%] origin-left">
                  <div className="bg-white p-3 rounded-2xl shadow-xl border border-gray-100 flex items-center gap-3 w-60">
-                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600"><i className="fas fa-car"></i></div>
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600"><Car size={18} /></div>
                     <div><p className="text-[10px] text-gray-400 font-bold uppercase">Vehicle Sold</p><p className="font-bold text-sm text-gray-900">Toyota Hilux 2022</p></div>
                 </div>
             </motion.div>
             <motion.div style={{ opacity: modalOpacity, x: rightX2, scale: modalScale, rotate: rightRotate }} className="absolute z-10 top-[40%] origin-left">
                  <div className="bg-white p-3 rounded-2xl shadow-xl border border-gray-100 flex items-center gap-3 w-64">
-                    <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600"><i className="fas fa-hand-holding-usd"></i></div>
+                    <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600"><Zap size={18} /></div>
                     <div><p className="text-[10px] text-gray-400 font-bold uppercase">Offer Received</p><p className="font-bold text-sm text-gray-900">Senegambia Apt.</p></div>
                 </div>
             </motion.div>
-            <motion.div style={{ opacity: modalOpacity, x: rightX, scale: modalScale, rotate: rightRotate }} className="absolute z-10 top-[55%] origin-left">
-                 <div className="bg-white p-3 rounded-2xl shadow-xl border border-gray-100 flex items-center gap-3 w-60">
-                    <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center text-red-600"><i className="fas fa-heart"></i></div>
-                    <div><p className="text-[10px] text-gray-400 font-bold uppercase">Saved</p><p className="font-bold text-sm text-gray-900">Kerr Serign Land</p></div>
-                </div>
-            </motion.div>
-            <motion.div style={{ opacity: modalOpacity, x: rightX2, scale: modalScale, rotate: rightRotate }} className="absolute z-10 top-[70%] origin-left">
-                 <div className="bg-white p-3 rounded-2xl shadow-xl border border-gray-100 flex items-center gap-3 w-64">
-                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600"><i className="fas fa-user-check"></i></div>
-                    <div><p className="text-[10px] text-gray-400 font-bold uppercase">Agent Joined</p><p className="font-bold text-sm text-gray-900">Modou Properties</p></div>
-                </div>
-            </motion.div>
-
+            
             {/* THE PHONE */}
             <motion.div 
                 style={{ y: phoneY, scale: phoneScale }}
@@ -206,8 +150,7 @@ const HeroSection = () => {
                 {/* Dynamic Island */}
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-7 bg-black rounded-b-2xl z-30"></div>
                 
-                {/* Screen Content - Adapted to Emerald Theme */}
-                {/* 'no-scrollbar' class + inline style ensure wheel is gone */}
+                {/* Screen Content */}
                 <div className="w-full h-full bg-gray-50 flex flex-col relative font-sans overflow-y-auto no-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                      
                      {/* 1. Header */}
@@ -221,15 +164,12 @@ const HeroSection = () => {
                                 <p className="text-sm font-bold text-gray-900">Alieu S.</p>
                             </div>
                         </div>
-                        <button className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition">
-                             <i className="fas fa-bell text-xs"></i>
-                        </button>
                      </div>
 
                      {/* 2. Search */}
                      <div className="px-5 mb-4 bg-white pb-2">
                          <div className="relative">
-                             <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
                              <input type="text" placeholder="Search homes or cars..." className="w-full bg-gray-100 border-none rounded-xl py-3 pl-10 text-sm focus:ring-2 focus:ring-emerald-500 text-gray-900 placeholder-gray-400 outline-none" />
                          </div>
                      </div>
@@ -240,7 +180,6 @@ const HeroSection = () => {
                             <button className="flex-shrink-0 bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-md shadow-emerald-200">All</button>
                             <button className="flex-shrink-0 bg-white border border-gray-100 text-gray-600 px-4 py-2 rounded-xl text-xs font-medium">Homes</button>
                             <button className="flex-shrink-0 bg-white border border-gray-100 text-gray-600 px-4 py-2 rounded-xl text-xs font-medium">Cars</button>
-                            <button className="flex-shrink-0 bg-white border border-gray-100 text-gray-600 px-4 py-2 rounded-xl text-xs font-medium">Land</button>
                          </div>
                      </div>
 
@@ -253,49 +192,18 @@ const HeroSection = () => {
                                 <span className="absolute top-2 right-2 bg-white/95 backdrop-blur px-2 py-1 rounded-md text-[10px] font-bold text-emerald-600 shadow-sm">FOR SALE</span>
                             </div>
                             <h3 className="font-bold text-gray-900 text-sm mb-1">Modern Villa in Brusubi</h3>
-                            <p className="text-emerald-500 font-bold text-sm mb-2">$185,000</p>
-                            <div className="flex items-center gap-3 text-xs text-gray-400">
-                                <span className="flex items-center gap-1"><i className="fas fa-bed text-[10px]"></i> 4</span>
-                                <span className="flex items-center gap-1"><i className="fas fa-bath text-[10px]"></i> 3</span>
-                                <span className="flex items-center gap-1"><i className="fas fa-ruler-combined text-[10px]"></i> 250m²</span>
-                            </div>
+                            <p className="text-emerald-500 font-bold text-sm mb-2">D7,500,000</p>
                         </div>
-
-                        {/* Card 2 */}
-                        <div className="bg-white rounded-2xl p-3 shadow-sm border border-gray-100">
-                            <div className="relative h-32 rounded-xl overflow-hidden mb-3">
-                                <img src="https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=500&q=80" alt="Car" className="w-full h-full object-cover" />
-                                <span className="absolute top-2 right-2 bg-white/95 backdrop-blur px-2 py-1 rounded-md text-[10px] font-bold text-blue-500 shadow-sm">RENTAL</span>
-                            </div>
-                            <h3 className="font-bold text-gray-900 text-sm mb-1">Toyota Land Cruiser</h3>
-                            <p className="text-emerald-500 font-bold text-sm mb-2">$85 / day</p>
-                            <div className="flex items-center gap-3 text-xs text-gray-400">
-                                <span className="flex items-center gap-1"><i className="fas fa-gas-pump text-[10px]"></i> Diesel</span>
-                                <span className="flex items-center gap-1"><i className="fas fa-cog text-[10px]"></i> Auto</span>
-                            </div>
-                        </div>
-                     </div>
-                     
-                     {/* 5. Bottom Nav */}
-                     <div className="absolute bottom-5 left-4 right-4 bg-gray-900/95 text-white rounded-2xl p-4 flex justify-between items-center backdrop-blur-xl shadow-2xl">
-                        <i className="fas fa-home text-emerald-400 text-lg"></i>
-                        <i className="far fa-compass text-gray-500 text-lg"></i>
-                        <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center -mt-8 border-4 border-gray-50 shadow-lg">
-                            <i className="fas fa-plus text-white text-sm"></i>
-                        </div>
-                        <i className="far fa-heart text-gray-500 text-lg"></i>
-                        <i className="far fa-user text-gray-500 text-lg"></i>
                      </div>
                 </div>
             </motion.div>
-
         </div>
       </div>
     </div>
   );
 };
 
-// --- 3. Infinite Scroll Marquee ---
+// --- 2. Infinite Scroll Marquee ---
 const InfiniteScrollMarquee = () => {
     return (
         <section className="py-12 bg-white overflow-hidden relative border-y border-gray-100">
@@ -316,8 +224,6 @@ const InfiniteScrollMarquee = () => {
                         <span className="text-6xl md:text-8xl font-black text-gray-100 uppercase tracking-tighter">Range Rover</span>
                         <div className="w-4 h-4 rounded-full bg-amber-400 shadow-lg shadow-amber-200"/>
                         <span className="text-6xl md:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-100 to-gray-200 uppercase tracking-tighter">Brufut Heights</span>
-                        <div className="w-4 h-4 rounded-full bg-emerald-500 shadow-lg shadow-emerald-200"/>
-                        <span className="text-6xl md:text-8xl font-black text-gray-100 uppercase tracking-tighter">Toyota</span>
                     </div>
                 ))}
             </motion.div>
@@ -325,7 +231,7 @@ const InfiniteScrollMarquee = () => {
     )
 }
 
-// --- 4. Marketplace Grid ---
+// --- 3. Marketplace Grid ---
 const MarketplaceGrid = () => {
   const categories = [
     { title: "Residential", subtitle: "Apartments & Villas", icon: <Home className="text-white" />, img: "https://images.unsplash.com/photo-1613490493576-7fde63acd811?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" },
@@ -361,7 +267,7 @@ const MarketplaceGrid = () => {
   );
 };
 
-// --- 5. Experience Banner ---
+// --- 4. Experience Banner ---
 const HavanaExperienceBanner = () => {
     return (
         <section className="py-20 md:py-32 bg-white flex items-center justify-center overflow-hidden border-t border-gray-100">
@@ -379,7 +285,7 @@ const HavanaExperienceBanner = () => {
     );
 };
 
-// --- 6. Features Section ---
+// --- 5. UPDATED Features Section (With React/Lucide Icons) ---
 const FeaturesSection = () => {
   return (
     <section className="py-24 bg-white">
@@ -393,20 +299,20 @@ const FeaturesSection = () => {
             {/* Box 1: Verified Listings */}
             <div className="md:col-span-2 bg-purple-50 rounded-3xl p-8 md:p-12 relative overflow-hidden border border-purple-100">
                 <div className="relative z-10 max-w-md">
-                    <div className="w-12 h-12 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center mb-6 text-xl shadow-sm">
-                        <i className="fas fa-shield-alt"></i>
+                    <div className="w-12 h-12 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center mb-6 shadow-sm">
+                        <ShieldCheck className="w-6 h-6" />
                     </div>
                     <h3 className="text-2xl font-bold mb-4 text-gray-900">Verified Listings Only</h3>
                     <p className="text-gray-600 mb-6">We manually verify every vehicle and property listed on Havanah to ensure you never encounter scams or fake listings.</p>
-                    <a href="#" className="text-purple-600 font-medium hover:underline flex items-center gap-1">Learn about our verification process <i className="fas fa-arrow-right text-xs"></i></a>
+                    <a href="#" className="text-purple-600 font-medium hover:underline flex items-center gap-1">Learn about our verification process <ArrowRight className="w-4 h-4" /></a>
                 </div>
                 <div className="absolute -right-10 top-1/2 -translate-y-1/2 w-64 h-64 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-50"></div>
             </div>
 
             {/* Box 2: Direct Chat */}
             <div className="bg-blue-50 rounded-3xl p-8 relative overflow-hidden border border-blue-100">
-                <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mb-6 text-xl shadow-sm">
-                    <i className="fas fa-comments"></i>
+                <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mb-6 shadow-sm">
+                    <MessageSquareText className="w-6 h-6" />
                 </div>
                 <h3 className="text-xl font-bold mb-3 text-gray-900">Direct Chat</h3>
                 <p className="text-gray-600 text-sm mb-6">Negotiate directly with sellers or agents using our secure in-app messaging system.</p>
@@ -424,8 +330,8 @@ const FeaturesSection = () => {
 
             {/* Box 3: Smart Search */}
             <div className="bg-orange-50 rounded-3xl p-8 border border-orange-100">
-                <div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center mb-6 text-xl shadow-sm">
-                    <i className="fas fa-search-location"></i>
+                <div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center mb-6 shadow-sm">
+                    <Search className="w-6 h-6" />
                 </div>
                 <h3 className="text-xl font-bold mb-3 text-gray-900">Smart Search</h3>
                 <p className="text-gray-600 text-sm">Filter by location, price, make, model, or number of bedrooms to find your perfect match instantly.</p>
@@ -434,8 +340,8 @@ const FeaturesSection = () => {
             {/* Box 4: Seller Dashboard */}
             <div className="md:col-span-2 bg-emerald-50 rounded-3xl p-8 border border-emerald-100 flex flex-col md:flex-row items-center gap-8">
                 <div className="flex-1">
-                    <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mb-6 text-xl shadow-sm">
-                        <i className="fas fa-chart-line"></i>
+                    <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mb-6 shadow-sm">
+                        <BarChart3 className="w-6 h-6" />
                     </div>
                     <h3 className="text-xl font-bold mb-3 text-gray-900">Seller Dashboard</h3>
                     <p className="text-gray-600 text-sm mb-4">Track views, messages, and engagement on your listings. Perfect for agents and dealerships.</p>
@@ -452,9 +358,6 @@ const FeaturesSection = () => {
                             <div className="w-1/5 bg-emerald-200 rounded-t-lg h-14"></div>
                             <div className="w-1/5 bg-emerald-100 rounded-t-lg h-10"></div>
                         </div>
-                        <div className="border-t border-gray-100 mt-2 pt-2 flex justify-between text-[10px] text-gray-400 font-medium">
-                            <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -464,7 +367,7 @@ const FeaturesSection = () => {
   );
 };
 
-// --- 7. Vertical Scroller ---
+// --- 6. Vertical Scroller ---
 const VerticalScroller = () => {
     const list1 = [
         { title: "Brufut Villa", price: "D7.5M", type: "Home", color: "bg-emerald-100" },
@@ -483,14 +386,6 @@ const VerticalScroller = () => {
                     <span className="text-amber-500 font-bold tracking-widest text-sm uppercase mb-4">Live Market Activity</span>
                     <h2 className="text-5xl md:text-6xl font-black mb-8 text-gray-900">What's Trending in <br/><span className="text-emerald-500">Real-time.</span></h2>
                     <p className="text-gray-500 mb-8 max-w-md text-lg">Our algorithm matches buyers and sellers across The Gambia instantly. Watch transactions happen.</p>
-                    <div className="flex gap-4">
-                        <div className="flex items-center gap-2 bg-white rounded-xl px-5 py-3 border border-gray-100 shadow-xl shadow-gray-100">
-                             <Zap className="text-amber-500 fill-amber-500" size={18}/> <span className="text-sm font-bold text-gray-800">128 Sales Today</span>
-                        </div>
-                         <div className="flex items-center gap-2 bg-white rounded-xl px-5 py-3 border border-gray-100 shadow-xl shadow-gray-100">
-                             <Radio className="text-emerald-500" size={18}/> <span className="text-sm font-bold text-gray-800">2.4k Active Users</span>
-                        </div>
-                    </div>
                 </div>
 
                 <div className="h-[600px] relative flex gap-6 rotate-[-5deg] scale-110 md:scale-100 opacity-90">
@@ -541,62 +436,123 @@ const VerticalScroller = () => {
     );
 }
 
-// --- 8. Pricing Section ---
+// --- 7. UPDATED Pricing Section ---
 const PricingSection = () => {
+  const [billingCycle, setBillingCycle] = useState('monthly'); // 'monthly' or 'yearly'
+
   return (
     <section className="py-24 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold mb-4 text-gray-900">Simple Pricing for Sellers</h2>
-          <p className="text-gray-500">Buyers are always free.</p>
+        <div className="text-center mb-10">
+          <h2 className="text-4xl font-bold mb-4 text-gray-900">Membership Plans</h2>
+          <p className="text-gray-500 mb-8">Choose the right plan for your real estate or vehicle needs.</p>
+          
+          {/* Billing Toggle */}
+          <div className="inline-flex items-center p-1 bg-white rounded-full border border-gray-200 mb-8 shadow-sm">
+             <button 
+                onClick={() => setBillingCycle('monthly')}
+                className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${billingCycle === 'monthly' ? 'bg-emerald-500 text-white shadow-md' : 'text-gray-500 hover:text-gray-900'}`}
+             >
+                Monthly
+             </button>
+             <button 
+                onClick={() => setBillingCycle('yearly')}
+                className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${billingCycle === 'yearly' ? 'bg-emerald-500 text-white shadow-md' : 'text-gray-500 hover:text-gray-900'}`}
+             >
+                Yearly
+             </button>
+          </div>
+          {billingCycle === 'yearly' && <p className="text-emerald-600 text-xs font-bold animate-pulse">Save up to 17% with yearly billing!</p>}
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto items-center">
-            <div className="bg-white p-8 rounded-[2rem] border border-gray-200 shadow-sm hover:shadow-lg transition-shadow">
-                <h3 className="font-bold text-xl text-gray-900">Individual</h3>
-                <div className="text-4xl font-bold my-6 text-gray-900">Free</div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto items-start">
+            
+            {/* PLAN A: NORMAL (Standard Access) */}
+            <div className="bg-white p-8 rounded-[2rem] border border-gray-200 shadow-sm hover:shadow-lg transition-shadow relative">
+                <div className="mb-6">
+                    <h3 className="font-bold text-xl text-gray-900">Normal Plan</h3>
+                    <p className="text-gray-500 text-xs mt-1">Standard Access</p>
+                </div>
+                <div className="flex items-baseline gap-1 mb-6">
+                    <span className="text-4xl font-bold text-gray-900">D{billingCycle === 'monthly' ? '200' : '2,000'}</span>
+                    <span className="text-gray-500">/{billingCycle === 'monthly' ? 'mo' : 'yr'}</span>
+                </div>
                 <ul className="space-y-4 mb-8">
-                    {['Up to 3 listings', 'Basic chat support', 'Standard visibility'].map(item => (
+                    {[
+                        'Full platform access', 
+                        'Rent cars & apartments', 
+                        'Contact 5 agents per day', 
+                        'Basic Support'
+                    ].map(item => (
                         <li key={item} className="flex items-center gap-3 text-sm text-gray-600">
-                            <Check size={16} className="text-emerald-500"/> {item}
+                            <CheckCircle2 size={18} className="text-emerald-500 flex-shrink-0"/> {item}
                         </li>
                     ))}
                 </ul>
-                <button className="w-full py-3 rounded-xl border border-gray-200 font-semibold hover:bg-gray-50 transition">Get Started</button>
+                <button className="w-full py-3 rounded-xl border border-gray-200 font-semibold hover:bg-gray-50 transition">Select Normal</button>
             </div>
 
-            <div className="bg-gray-900 p-8 rounded-[2rem] shadow-2xl relative transform md:-translate-y-6">
-                <div className="absolute top-0 right-0 bg-emerald-500 text-white text-xs font-bold px-4 py-1.5 rounded-bl-xl rounded-tr-[2rem]">POPULAR</div>
-                <h3 className="font-bold text-xl text-white">Agent</h3>
-                <div className="text-4xl font-bold my-6 text-white">$29<span className="text-lg font-normal text-gray-400">/mo</span></div>
+            {/* PLAN B: PRO (Active Users) */}
+            <div className="bg-emerald-50 p-8 rounded-[2rem] border border-emerald-200 shadow-xl relative transform md:-translate-y-4">
+                <div className="absolute top-0 right-0 bg-emerald-500 text-white text-xs font-bold px-4 py-1.5 rounded-bl-xl rounded-tr-[2rem]">BEST VALUE</div>
+                <div className="mb-6">
+                    <h3 className="font-bold text-xl text-gray-900">Pro Plan</h3>
+                    <p className="text-emerald-600 text-xs mt-1 font-bold">For Active Users</p>
+                </div>
+                <div className="flex items-baseline gap-1 mb-6">
+                    <span className="text-4xl font-bold text-gray-900">D{billingCycle === 'monthly' ? '700' : '7,000'}</span>
+                    <span className="text-gray-500">/{billingCycle === 'monthly' ? 'mo' : 'yr'}</span>
+                </div>
                 <ul className="space-y-4 mb-8">
-                    {['Up to 20 listings', 'Featured listings (2/mo)', 'Verified Badge', 'Priority Support'].map(item => (
+                    {[
+                        'Everything in Normal Plan',
+                        'Unlimited Agent Contacts',
+                        'List 1 item for sale (Free)',
+                        'Priority Listings',
+                        'Priority Support'
+                    ].map(item => (
+                        <li key={item} className="flex items-center gap-3 text-sm text-gray-700 font-medium">
+                            <CheckCircle2 size={18} className="text-emerald-600 flex-shrink-0"/> {item}
+                        </li>
+                    ))}
+                </ul>
+                <button className="w-full py-3 rounded-xl bg-emerald-500 text-white font-bold hover:bg-emerald-600 transition shadow-lg shadow-emerald-200">Get Pro Access</button>
+            </div>
+
+            {/* PLAN C: PRO PLUS (Agents & Dealers) */}
+            <div className="bg-gray-900 p-8 rounded-[2rem] shadow-2xl relative">
+                <div className="mb-6">
+                    <h3 className="font-bold text-xl text-white">Pro Plus</h3>
+                    <p className="text-gray-400 text-xs mt-1">Agents & Dealerships</p>
+                </div>
+                <div className="flex items-baseline gap-1 mb-6">
+                    <span className="text-4xl font-bold text-white">D{billingCycle === 'monthly' ? '2,000' : '20,000'}</span>
+                    <span className="text-gray-400">/{billingCycle === 'monthly' ? 'mo' : 'yr'}</span>
+                </div>
+                <ul className="space-y-4 mb-8">
+                    {[
+                        'Access to User Data/Trends',
+                        'Outreach Marketing Tools',
+                        'Competitor Price Analysis',
+                        'Verified Agent Badge',
+                        'Banner Ad Eligibility',
+                        'Branded Profile'
+                    ].map(item => (
                         <li key={item} className="flex items-center gap-3 text-sm text-gray-300">
-                            <Check size={16} className="text-emerald-500"/> {item}
+                            <Star size={18} className="text-amber-400 flex-shrink-0"/> {item}
                         </li>
                     ))}
                 </ul>
-                <button className="w-full py-3 rounded-xl bg-emerald-500 text-white font-semibold hover:bg-emerald-600 transition shadow-lg shadow-emerald-500/30">Start Free Trial</button>
+                <button className="w-full py-3 rounded-xl bg-white/10 text-white border border-white/20 font-semibold hover:bg-white/20 transition">Contact Sales</button>
             </div>
 
-            <div className="bg-white p-8 rounded-[2rem] border border-gray-200 shadow-sm hover:shadow-lg transition-shadow">
-                <h3 className="font-bold text-xl text-gray-900">Dealership</h3>
-                <div className="text-4xl font-bold my-6 text-gray-900">$99<span className="text-lg font-normal text-gray-500">/mo</span></div>
-                <ul className="space-y-4 mb-8">
-                    {['Unlimited listings', 'Dealer Dashboard', 'CRM Integration'].map(item => (
-                        <li key={item} className="flex items-center gap-3 text-sm text-gray-600">
-                            <Check size={16} className="text-emerald-500"/> {item}
-                        </li>
-                    ))}
-                </ul>
-                <button className="w-full py-3 rounded-xl border border-gray-200 font-semibold hover:bg-gray-50 transition">Contact Sales</button>
-            </div>
         </div>
       </div>
     </section>
   );
 };
 
-// --- 9. Payment Ecosystem ---
+// --- 8. Payment Ecosystem ---
 const PaymentEcosystem = () => {
     return (
         <section className="py-24 bg-white relative overflow-hidden">
@@ -606,7 +562,7 @@ const PaymentEcosystem = () => {
              <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center gap-20">
                  <div className="flex-1">
                      <div className="inline-flex items-center gap-2 text-emerald-600 font-bold uppercase tracking-widest text-xs mb-6 border border-emerald-100 bg-emerald-50 px-4 py-2 rounded-full">
-                         <Shield size={14}/> Secure Local Transactions
+                         <ShieldCheck size={14}/> Secure Local Transactions
                      </div>
                      <h2 className="text-5xl font-black leading-tight mb-8 text-gray-900">
                          Local Payments, <br/>
@@ -664,7 +620,7 @@ const PaymentEcosystem = () => {
     )
 }
 
-// --- 10. Footer ---
+// --- 9. Footer ---
 const Footer = () => {
   return (
     <footer className="bg-white border-t border-gray-100 pt-16 pb-8">
@@ -679,9 +635,10 @@ const Footer = () => {
               The #1 Marketplace in Gambia for trusted Real Estate and Vehicle transactions.
             </p>
             <div className="flex gap-4">
-               <i className="fab fa-twitter text-gray-400 hover:text-emerald-500 text-xl transition cursor-pointer"></i>
-               <i className="fab fa-instagram text-gray-400 hover:text-emerald-500 text-xl transition cursor-pointer"></i>
-               <i className="fab fa-facebook text-gray-400 hover:text-emerald-500 text-xl transition cursor-pointer"></i>
+               {/* Social Icons Placeholder */}
+               <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-emerald-500 hover:text-white transition cursor-pointer">X</div>
+               <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-emerald-500 hover:text-white transition cursor-pointer">In</div>
+               <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-emerald-500 hover:text-white transition cursor-pointer">Fb</div>
             </div>
           </div>
           <div>
@@ -704,7 +661,7 @@ const Footer = () => {
           </div>
         </div>
         <div className="border-t border-gray-100 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-sm text-gray-400">© 2024 Havanah Gambia. All rights reserved.</p>
+          <p className="text-sm text-gray-400">© 2025 Havanah Gambia. All rights reserved.</p>
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
             <span className="text-sm text-gray-500">Systems Operational</span>
@@ -721,34 +678,18 @@ export default function HomePage() {
     <div className="bg-white min-h-screen font-sans selection:bg-emerald-100 selection:text-emerald-900">
       <Head>
         <title>Havanah Gambia - Real Estate & Vehicle Marketplace</title>
-        <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
       </Head>
       
-      <Navbar />
+      {/* Navbar Removed as requested */}
       
       <main>
-        {/* REVISED HERO: App store buttons fade up from bottom + Smoother Modal Animation + No Scrollbar */}
         <HeroSection />
-        
-        {/* Infinite Scroll Marquee */}
         <InfiniteScrollMarquee />
-        
-        {/* Original Marketplace Grid */}
         <MarketplaceGrid />
-        
-        {/* Experience Banner */}
         <HavanaExperienceBanner />
-        
-        {/* Features Section */}
         <FeaturesSection />
-        
-        {/* Vertical Scroller */}
         <VerticalScroller />
-        
-        {/* Pricing */}
         <PricingSection />
-        
-        {/* Payment Ecosystem */}
         <PaymentEcosystem />
       </main>
 
