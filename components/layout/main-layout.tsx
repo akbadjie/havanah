@@ -4,7 +4,7 @@ import React, { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-store';
 import Navbar from '@/components/layout/navbar/navbar';
-import Sidebar from '@/components/layout/sidebar/sidebar'; // Assuming your sidebar file name
+import Sidebar from '@/components/layout/sidebar/sidebar'; 
 import { ToastProvider } from '@/components/toast/toast';
 
 interface MainLayoutProps {
@@ -16,7 +16,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const router = useRouter();
   const { user, loading, initializeAuth } = useAuth();
 
-  // 0. Initialize Auth on Mount (Firebase onAuthStateChanged)
+  // 0. Initialize Auth on Mount
   useEffect(() => {
     initializeAuth();
   }, [initializeAuth]);
@@ -24,7 +24,6 @@ export default function MainLayout({ children }: MainLayoutProps) {
   // 1. Define Route Groups
   const isAuthPage = pathname?.startsWith('/auth');
   
-  // Routes that require the Sidebar (Private / Dashboard views)
   const isSidebarRoute = 
     pathname?.startsWith('/agent') ||
     pathname?.startsWith('/user') ||
@@ -36,18 +35,16 @@ export default function MainLayout({ children }: MainLayoutProps) {
   // 2. Auth Protection Logic
   useEffect(() => {
     if (!loading) {
-      // If user tries to access a sidebar route without being logged in
       if (isSidebarRoute && !user) {
         router.push('/auth?redirect=' + pathname);
       }
-      // Optional: If user is logged in and tries to access login page
       if (isAuthPage && user) {
         router.push('/explore');
       }
     }
   }, [user, loading, isSidebarRoute, isAuthPage, router, pathname]);
 
-  // 3. Loading State (Prevents flickering)
+  // 3. Loading State
   if (loading) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-gray-50">
@@ -59,9 +56,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
     );
   }
 
-  // 4. Render Logic based on Route Type
+  // 4. Render Logic
 
-  // CASE A: Auth Pages (Login/Signup) - Full Screen, No Nav
+  // CASE A: Auth Pages
   if (isAuthPage) {
     return (
       <ToastProvider>
@@ -76,13 +73,15 @@ export default function MainLayout({ children }: MainLayoutProps) {
       <ToastProvider>
         <div className="flex min-h-screen bg-gray-50">
           <Sidebar />
+          
           {/* 
-             Sidebar is fixed width (approx 280px). 
-             We add margin-left to main content so it doesn't overlap.
-             We also hide sidebar on mobile (handled in Sidebar component), 
-             so we adjust margin for mobile accordingly.
+             UPDATED MAIN CONTAINER:
+             1. ml-0: No left margin on mobile.
+             2. lg:ml-[280px]: Left margin on desktop for Sidebar.
+             3. pb-24: Bottom padding on mobile so content isn't hidden behind Bottom Nav.
+             4. lg:pb-0: No bottom padding on desktop.
           */}
-          <main className="flex-1 lg:ml-[280px] p-0 transition-all duration-300">
+          <main className="flex-1 ml-0 lg:ml-[280px] pb-24 lg:pb-0 p-0 transition-all duration-300">
             {children}
           </main>
         </div>
@@ -90,12 +89,11 @@ export default function MainLayout({ children }: MainLayoutProps) {
     );
   }
 
-  // CASE C: Public Pages (Landing, Explore, Listings, Agent Profiles) - Navbar + Content
+  // CASE C: Public Pages
   return (
     <ToastProvider>
       <div className="flex flex-col min-h-screen">
         <Navbar />
-        {/* Navbar is fixed/sticky, add padding-top to prevent content hiding behind it */}
         <main className="flex-1 pt-[80px]">
           {children}
         </main>
