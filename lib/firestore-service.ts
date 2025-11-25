@@ -17,6 +17,22 @@ import {
 } from 'firebase/firestore';
 import { getFirestoreInstance } from '@/lib/firebase';
 
+// ==================== UTILS ====================
+
+/**
+ * HELPER: Removes keys with 'undefined' values from objects.
+ * Firestore does not support 'undefined', only 'null' or omitted fields.
+ */
+const cleanData = (data: any) => {
+  const cleaned: any = {};
+  Object.keys(data).forEach(key => {
+    if (data[key] !== undefined) {
+      cleaned[key] = data[key];
+    }
+  });
+  return cleaned;
+};
+
 // ==================== TYPES & INTERFACES ====================
 
 export interface Listing {
@@ -95,8 +111,11 @@ export const createListing = async (agentId: string, listingData: Omit<Listing, 
     const db = getFirestoreInstance();
     const now = Timestamp.now();
     
+    // Sanitize input
+    const sanitizedData = cleanData(listingData);
+
     const docRef = await addDoc(collection(db, 'listings'), {
-      ...listingData,
+      ...sanitizedData,
       agentId,
       views: 0,
       inquiries: 0,
@@ -154,7 +173,10 @@ export const updateListing = async (listingId: string, updates: Partial<Listing>
   try {
     const db = getFirestoreInstance();
     const docRef = doc(db, 'listings', listingId);
-    await updateDoc(docRef, { ...updates, updatedAt: Timestamp.now() });
+    
+    const sanitizedUpdates = cleanData(updates);
+
+    await updateDoc(docRef, { ...sanitizedUpdates, updatedAt: Timestamp.now() });
   } catch (error) {
     console.error('Error updating listing:', error);
     throw error;
@@ -181,7 +203,6 @@ export const incrementListingViews = async (listingId: string): Promise<void> =>
   try {
     const db = getFirestoreInstance();
     const docRef = doc(db, 'listings', listingId);
-    // Note: In high traffic, utilize increment() from firestore, but reading first allows for view throttling logic if needed
     const listing = await getDoc(docRef);
     if (listing.exists()) {
       await updateDoc(docRef, { views: (listing.data().views || 0) + 1 });
@@ -208,8 +229,6 @@ export const getAllListings = async (
     if (type) conditions.push(where('type', '==', type));
     if (category) conditions.push(where('category', '==', category));
 
-    // Note: Firestore requires composite indexes for complex queries.
-    // If this fails, check browser console for the index creation link.
     const q = query(
       collection(db, 'listings'),
       ...conditions,
@@ -237,7 +256,7 @@ export const advancedSearchListings = async (
     priceMax?: number;
     bedrooms?: number;
     bathrooms?: number;
-    area?: number; // squareFeet
+    area?: number; 
   }
 ): Promise<Array<Listing & { relevance: number }>> => {
   try {
@@ -253,14 +272,13 @@ export const advancedSearchListings = async (
 
     let results = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Listing[];
 
-    // 1. Client-side Filter (Price, Area, Beds)
+    // 1. Client-side Filter
     results = results.filter(l => {
       if (filters?.priceMin && l.price < filters.priceMin) return false;
       if (filters?.priceMax && l.price > filters.priceMax) return false;
       if (filters?.bedrooms !== undefined && l.bedrooms !== filters.bedrooms) return false;
       if (filters?.bathrooms !== undefined && l.bathrooms !== filters.bathrooms) return false;
       if (filters?.area && l.squareFeet) {
-        // Allow 20% variance in area size
         if (Math.abs(l.squareFeet - filters.area) > (filters.area * 0.2)) return false;
       }
       return true;
@@ -272,25 +290,22 @@ export const advancedSearchListings = async (
     const scoredResults = results.map(listing => {
       let score = 0;
 
-      // Text Match
       if (searchQuery) {
         if (listing.title.toLowerCase().includes(queryLower)) score += 30;
         if (listing.location.toLowerCase().includes(queryLower)) score += 20;
         if (listing.description.toLowerCase().includes(queryLower)) score += 10;
-        if (listing.brand?.toLowerCase().includes(queryLower)) score += 20; // Car brand
-        if (listing.model?.toLowerCase().includes(queryLower)) score += 20; // Car model
+        if (listing.brand?.toLowerCase().includes(queryLower)) score += 20; 
+        if (listing.model?.toLowerCase().includes(queryLower)) score += 20;
       } else {
-        score = 50; // Default score to keep sort stable
+        score = 50; 
       }
 
-      // Recency Boost
       const daysOld = (Date.now() - listing.createdAt.toMillis()) / (1000 * 60 * 60 * 24);
       if (daysOld < 7) score += 10;
 
       return { ...listing, relevance: score };
     });
 
-    // 3. Sort by Relevance
     return scoredResults.sort((a, b) => b.relevance - a.relevance);
 
   } catch (error) {
@@ -314,7 +329,8 @@ export const createInquiry = async (
   try {
     const db = getFirestoreInstance();
     
-    const docRef = await addDoc(collection(db, 'inquiries'), {
+    // Clean inputs (specifically userPhone which might be undefined)
+    const data = cleanData({
       listingId,
       agentId,
       listingTitle,
@@ -327,7 +343,8 @@ export const createInquiry = async (
       createdAt: Timestamp.now(),
     });
 
-    // Increment inquiry count on listing
+    const docRef = await addDoc(collection(db, 'inquiries'), data);
+
     const listingRef = doc(db, 'listings', listingId);
     const listingSnap = await getDoc(listingRef);
     if (listingSnap.exists()) {
@@ -384,12 +401,16 @@ export const createUserProfile = async (userData: Omit<UserProfile, 'createdAt' 
   try {
     const db = getFirestoreInstance();
     const now = Timestamp.now();
+    
+    // IMPORTANT: Remove 'undefined' fields (like phoneNumber) before saving
+    const sanitizedUserData = cleanData(userData);
+
     await setDoc(doc(db, 'users', userData.uid), {
-      ...userData,
+      ...sanitizedUserData,
       favorites: [],
       createdAt: now,
       updatedAt: now,
-    }, { merge: true }); // merge: true prevents overwriting if somehow exists
+    }, { merge: true });
   } catch (error) {
     console.error('Error creating user profile:', error);
     throw error;
@@ -410,15 +431,16 @@ export const getUserProfile = async (uid: string): Promise<UserProfile | null> =
 
 export const updateUserProfile = async (userId: string, data: Partial<UserProfile>) => {
   const db = getFirestoreInstance();
+  
+  // Sanitize updates
+  const sanitizedData = cleanData(data);
+
   await updateDoc(doc(db, 'users', userId), {
-    ...data,
+    ...sanitizedData,
     updatedAt: Timestamp.now()
   });
 };
 
-/**
- * Toggle Favorite Listing for a User
- */
 export const toggleFavorite = async (userId: string, listingId: string): Promise<boolean> => {
   try {
     const db = getFirestoreInstance();
@@ -437,7 +459,7 @@ export const toggleFavorite = async (userId: string, listingId: string): Promise
       }
       
       await updateDoc(userRef, { favorites: newFavorites });
-      return !isFavorited; // Return the new state (true = added, false = removed)
+      return !isFavorited; 
     }
     return false;
   } catch (error) {
@@ -446,9 +468,6 @@ export const toggleFavorite = async (userId: string, listingId: string): Promise
   }
 };
 
-/**
- * Get a user's favorite listings (Full objects)
- */
 export const getUserFavorites = async (userId: string): Promise<Listing[]> => {
   try {
     const db = getFirestoreInstance();
@@ -457,10 +476,6 @@ export const getUserFavorites = async (userId: string): Promise<Listing[]> => {
     if (!userProfile || !userProfile.favorites || userProfile.favorites.length === 0) {
       return [];
     }
-
-    // Firestore 'in' query supports up to 10 items. 
-    // For production scaling, you might need to batch this or fetch by ID individually.
-    // Here we implement the "Fetch by ID" method which is safer for >10 items.
     
     const listingPromises = userProfile.favorites.map(id => getListing(id));
     const listings = await Promise.all(listingPromises);
@@ -474,9 +489,6 @@ export const getUserFavorites = async (userId: string): Promise<Listing[]> => {
 
 // ==================== DASHBOARD STATS ====================
 
-/**
- * Calculate stats for Agent Dashboard
- */
 export const getAgentStats = async (agentId: string): Promise<AgentStats> => {
   try {
     const listings = await getAgentListings(agentId);
@@ -506,9 +518,7 @@ export const getAgentStats = async (agentId: string): Promise<AgentStats> => {
   }
 };
 
-// Export Default Object for convenience
 export default {
-  // Listings
   createListing,
   getAgentListings,
   getAllListings,
@@ -517,20 +527,14 @@ export default {
   deleteListing,
   incrementListingViews,
   advancedSearchListings,
-  
-  // Inquiries
   createInquiry,
   getAgentInquiries,
   getUserApplications,
   updateInquiryStatus,
-
-  // Profiles & User Actions
   createUserProfile,
   getUserProfile,
   updateUserProfile,
   toggleFavorite,
   getUserFavorites,
-
-  // Dashboard
   getAgentStats,
 };
