@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
-import { Zap, Radio, Shield, Check, Star, Menu, Search, Home, Briefcase, MapPin } from 'lucide-react';
+import { Zap, Radio, Shield, Check, Star, Menu, Search, Home, Briefcase, MapPin , Car} from 'lucide-react';
 import Head from 'next/head';
 
 // --- Utility Components ---
