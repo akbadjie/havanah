@@ -8,9 +8,10 @@ import {
   updateProfile,
   onAuthStateChanged,
   User,
+  getAdditionalUserInfo // Import this to check if user is new
 } from 'firebase/auth';
 import { getAuthInstance } from '@/lib/firebase';
-import { createUserProfile, getUserProfile } from '@/lib/firestore-service';
+import { createUserProfile, getUserProfile, UserProfile } from '@/lib/firestore-service';
 
 export type UserRole = 'user' | 'agent';
 
@@ -40,6 +41,7 @@ export const useAuth = create<AuthState>((set, get) => ({
   loading: true,
   error: null,
 
+  // ... (register and login functions remain the same) ...
   register: async (email: string, password: string, role: UserRole, displayName?: string, phoneNumber?: string) => {
     try {
       set({ error: null, loading: true });
@@ -50,23 +52,16 @@ export const useAuth = create<AuthState>((set, get) => ({
         await updateProfile(result.user, { displayName });
       }
 
-      try {
-        // Create Firestore user profile
-        await createUserProfile({
-          uid: result.user.uid,
-          email: result.user.email || email,
-          displayName: displayName || result.user.displayName || 'New User',
-          phoneNumber: phoneNumber || undefined,
-          role,
-          profileImage: result.user.photoURL || undefined,
-        });
-        console.log('✅ Signup profile created in Firestore');
-      } catch (firestoreError: any) {
-        console.error('Error creating Firestore profile during signup:', firestoreError);
-        throw new Error(`Failed to create user profile: ${firestoreError?.message}`);
-      }
+      // CRITICAL: Await this before finishing
+      await createUserProfile({
+        uid: result.user.uid,
+        email: result.user.email || email,
+        displayName: displayName || result.user.displayName || 'New User',
+        phoneNumber: phoneNumber || undefined,
+        role,
+        profileImage: result.user.photoURL || undefined,
+      });
 
-      // onAuthStateChanged listener will handle setting user state
       set({ loading: false });
     } catch (error: any) {
       set({ error: error?.message || 'Registration failed', loading: false });
@@ -79,7 +74,7 @@ export const useAuth = create<AuthState>((set, get) => ({
       set({ error: null, loading: true });
       const auth = getAuthInstance();
       await signInWithEmailAndPassword(auth, email, password);
-      // onAuthStateChanged will handle the rest
+      // We rely on initializeAuth to fetch the profile
       set({ loading: false });
     } catch (error: any) {
       set({ error: error?.message || 'Login failed', loading: false });
@@ -92,34 +87,48 @@ export const useAuth = create<AuthState>((set, get) => ({
       set({ error: null, loading: true });
       const auth = getAuthInstance();
       const provider = new GoogleAuthProvider();
+      
+      // 1. Perform the Popup Sign In
       const result = await signInWithPopup(auth, provider);
+      const user = result.user;
 
-      try {
-        // Check if Firestore profile exists
-        const existing = await getUserProfile(result.user.uid);
+      // 2. Check if Firestore Profile Exists
+      let profile = await getUserProfile(user.uid);
 
-        // If profile doesn't exist, create it
-        if (!existing) {
-          await createUserProfile({
-            uid: result.user.uid,
-            email: result.user.email || '',
-            displayName: result.user.displayName || 'Google User',
-            phoneNumber: result.user.phoneNumber || undefined,
-            role,
-            profileImage: result.user.photoURL || undefined,
-          });
-          console.log('✅ Google user profile created in Firestore');
-        } else {
-          console.log('✅ Google user profile already exists');
-        }
-      } catch (firestoreError: any) {
-        console.error('Error managing Firestore profile during Google login:', firestoreError);
-        throw new Error(`Profile creation failed: ${firestoreError?.message}`);
+      // 3. If NO profile exists, CREATE one immediately.
+      // We do not rely on "isNewUser" alone, because sometimes a previous creation might have failed.
+      if (!profile) {
+        console.log('Creating new Firestore profile for Google user...');
+        
+        const newProfileData = {
+          uid: user.uid,
+          email: user.email || '',
+          displayName: user.displayName || 'Google User',
+          phoneNumber: user.phoneNumber || undefined,
+          role: role, // Use the role selected in the UI
+          profileImage: user.photoURL || undefined,
+        };
+
+        await createUserProfile(newProfileData);
+        
+        // Update local variable so we can set state immediately
+        profile = { ...newProfileData, createdAt: new Date(), updatedAt: new Date() } as unknown as UserProfile;
       }
 
-      // onAuthStateChanged will handle setting the user state
-      set({ loading: false });
+      // 4. Manually update state immediately (don't wait for listener) to prevent UI flash
+      const userObj: AuthUser = {
+        id: user.uid,
+        email: user.email,
+        role: profile.role || role,
+        displayName: user.displayName,
+        phoneNumber: user.phoneNumber,
+        photoURL: user.photoURL,
+      };
+
+      set({ user: userObj, loading: false });
+      
     } catch (error: any) {
+      console.error("Google Login Error:", error);
       set({ error: error?.message || 'Google login failed', loading: false });
       throw error;
     }
@@ -151,26 +160,25 @@ export const useAuth = create<AuthState>((set, get) => ({
           return;
         }
 
-        // Load or create Firestore profile
+        // 1. Fetch Profile
         let profile = await getUserProfile(firebaseUser.uid);
 
-        // Ensure profile exists (fallback for users who signed up before this fix)
+        // 2. SELF-HEALING: If Auth exists but Firestore is missing (e.g. previous error), create it now.
         if (!profile) {
-          console.log('Profile not found, creating fallback profile for:', firebaseUser.uid);
+          console.warn('⚠️ User exists in Auth but missing in Firestore. Attempting repair...');
           try {
-            await createUserProfile({
+            const fallbackData = {
               uid: firebaseUser.uid,
               email: firebaseUser.email || '',
-              displayName: firebaseUser.displayName || 'New User',
+              displayName: firebaseUser.displayName || 'Recovered User',
               phoneNumber: firebaseUser.phoneNumber || undefined,
-              role: 'user',
+              role: 'user' as UserRole, // Default to 'user' if recovering
               profileImage: firebaseUser.photoURL || undefined,
-            });
-            // Fetch the newly created profile
-            profile = await getUserProfile(firebaseUser.uid);
-            console.log('✅ Fallback profile created successfully');
-          } catch (createError: any) {
-            console.error('Error creating fallback profile:', createError);
+            };
+            await createUserProfile(fallbackData);
+            profile = fallbackData as any;
+          } catch (createError) {
+            console.error('Failed to auto-repair user profile:', createError);
           }
         }
 
@@ -183,15 +191,13 @@ export const useAuth = create<AuthState>((set, get) => ({
           photoURL: firebaseUser.photoURL,
         };
 
-        console.log('✅ Auth state updated with user:', userObj);
         set({ user: userObj, loading: false });
       } catch (error: any) {
         console.error('Error in onAuthStateChanged:', error);
-        set({ error: error?.message || 'Auth initialization failed', loading: false });
+        set({ error: error?.message, loading: false });
       }
     });
 
-    // Return unsubscribe function for cleanup
     return unsubscribe;
   },
 }));
