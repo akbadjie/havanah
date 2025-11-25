@@ -114,7 +114,7 @@ const HeroSection = () => {
     >
         {/* Google Play Logo (SVG) */}
         <img 
-            src="https://upload.wikimedia.org/wikipedia/commons/5/5f/Google_Play_2016_logo.svg"
+            src="https://upload.wikimedia.org/wikipedia/commons/7/71/Google_Play_2016_logo.svg"
             alt="Google Play"
             className="w-6 h-6"
         />
