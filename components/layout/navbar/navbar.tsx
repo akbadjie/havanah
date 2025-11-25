@@ -92,7 +92,7 @@ export default function Navbar() {
                 Log In
               </Link>
               <Link 
-                href="/auth/signup" 
+                href="/auth" 
                 className="px-5 py-2 bg-emerald-500 text-white rounded-lg text-sm font-bold hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 transition-all"
               >
                 Sign Up
@@ -145,7 +145,7 @@ export default function Navbar() {
                 <Link href="/auth" onClick={() => setMobileMenuOpen(false)} className="w-full py-3 text-center rounded-xl bg-gray-100 font-bold text-gray-700">
                   Log In
                 </Link>
-                <Link href="/auth/signup" onClick={() => setMobileMenuOpen(false)} className="w-full py-3 text-center rounded-xl bg-emerald-500 text-white font-bold">
+                <Link href="/auth" onClick={() => setMobileMenuOpen(false)} className="w-full py-3 text-center rounded-xl bg-emerald-500 text-white font-bold">
                   Sign Up
                 </Link>
               </div>

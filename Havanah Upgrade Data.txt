@@ -2050,7 +2050,7 @@ export default function LoginPage() {
           </motion.button>
 
           <motion.p variants={itemVariants} className="text-center text-[0.59rem] text-gray-500 mt-4">
-            Don't have an account? <Link href="/auth/signup" className="text-emerald-500 font-semibold hover:underline">Sign up</Link>
+            Don't have an account? <Link href="/auth" className="text-emerald-500 font-semibold hover:underline">Sign up</Link>
           </motion.p>
           
           <motion.p variants={itemVariants} className="text-center text-[0.59rem] text-gray-400 mt-1">
