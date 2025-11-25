@@ -29,8 +29,8 @@ const HeroSection = () => {
   // 2. Phone Position (Y-Axis) - Moves up and stays pinned
   const phoneY = useTransform(scrollYProgress, [0, 0.4, 0.8], ["85%", "0%", "0%"]);
   
-  // 3. Phone Scale (Shrink slightly)
-  const phoneScale = useTransform(scrollYProgress, [0.4, 0.6], [1, 0.9]);
+  // 3. Phone Scale (FIXED: Shrinks down to 0.75 to make room for buttons)
+  const phoneScale = useTransform(scrollYProgress, [0.4, 0.6], [1, 0.75]);
 
   // 4. App Store Buttons (Fade in from BOTTOM)
   const btnOpacity = useTransform(scrollYProgress, [0.6, 0.75], [0, 1]);
@@ -183,16 +183,26 @@ const HeroSection = () => {
                          </div>
                      </div>
 
-                     {/* 4. Content Feed */}
+                     {/* 4. Content Feed - FIXED: Added car.png and house.png */}
                      <div className="px-5 space-y-4 pb-24">
-                        {/* Card 1 */}
+                        {/* HOUSE CARD */}
                         <div className="bg-white rounded-2xl p-3 shadow-sm border border-gray-100">
                             <div className="relative h-32 rounded-xl overflow-hidden mb-3">
-                                <img src="https://images.unsplash.com/photo-1600596542815-60c37c6525fa?auto=format&fit=crop&w=500&q=80" alt="House" className="w-full h-full object-cover" />
+                                <img src="/house.png" alt="House" className="w-full h-full object-cover" />
                                 <span className="absolute top-2 right-2 bg-white/95 backdrop-blur px-2 py-1 rounded-md text-[10px] font-bold text-emerald-600 shadow-sm">FOR SALE</span>
                             </div>
                             <h3 className="font-bold text-gray-900 text-sm mb-1">Modern Villa in Brusubi</h3>
                             <p className="text-emerald-500 font-bold text-sm mb-2">D7,500,000</p>
+                        </div>
+                        
+                        {/* CAR CARD */}
+                        <div className="bg-white rounded-2xl p-3 shadow-sm border border-gray-100">
+                            <div className="relative h-32 rounded-xl overflow-hidden mb-3">
+                                <img src="/car.png" alt="Car" className="w-full h-full object-cover" />
+                                <span className="absolute top-2 right-2 bg-gray-900/95 backdrop-blur text-white px-2 py-1 rounded-md text-[10px] font-bold shadow-sm">SOLD</span>
+                            </div>
+                            <h3 className="font-bold text-gray-900 text-sm mb-1">Lexus LX 570</h3>
+                            <p className="text-emerald-500 font-bold text-sm mb-2">D3,200,000</p>
                         </div>
                      </div>
                 </div>
@@ -552,7 +562,7 @@ const PricingSection = () => {
   );
 };
 
-// --- 8. Payment Ecosystem (UPDATED WITH LOGOS) ---
+// --- 8. Payment Ecosystem (UPDATED: Always Colorful) ---
 const PaymentEcosystem = () => {
     
     // Logos mapped to local public folder paths
@@ -590,7 +600,8 @@ const PaymentEcosystem = () => {
                                  <img 
                                     src={pay.src} 
                                     alt={pay.name} 
-                                    className="w-full h-full object-contain grayscale hover:grayscale-0 opacity-70 hover:opacity-100 transition-all duration-300"
+                                    // FIXED: Removed grayscale and opacity to make them always colorful
+                                    className="w-full h-full object-contain hover:scale-110 transition-all duration-300"
                                  />
                              </motion.div>
                         ))}
