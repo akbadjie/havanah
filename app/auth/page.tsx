@@ -17,7 +17,7 @@ import { FaGoogle } from 'react-icons/fa';
 import { useAuth } from '@/lib/auth-store';
 import { useToast } from '@/components/toast/toast';
 
-export default function AuthPage() {
+function AuthPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login, register, loginWithGoogle, loading } = useAuth();
@@ -109,8 +109,7 @@ export default function AuthPage() {
   };
 
   return (
-    <Suspense>
-      <div className="min-h-screen w-full flex items-center justify-center bg-gray-50 relative overflow-hidden font-sans">
+    <div className="min-h-screen w-full flex items-center justify-center bg-gray-50 relative overflow-hidden font-sans">
         {/* --- Animated Background Blobs --- */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <motion.div 
@@ -293,6 +292,13 @@ export default function AuthPage() {
         </motion.div>
         </div>
       </div>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen w-full flex items-center justify-center bg-gray-50">Loading...</div>}>
+      <AuthPageContent />
     </Suspense>
   );
 }
