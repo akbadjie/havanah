@@ -71,17 +71,17 @@ const HeroSection = () => {
                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
              </span>
-             <span className="text-xs font-bold text-emerald-800 tracking-wide uppercase">Havanah Mobile App v2.0</span>
+             <span className="text-xs font-bold text-emerald-800 tracking-wide uppercase">Havanah Mobile App v2.0 is live</span>
           </div>
           
           <h1 className="text-6xl md:text-8xl font-extrabold tracking-tight text-gray-900 mb-8 leading-[0.9]">
-            Find your dream <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-emerald-400">home today.</span>
+          Find Your Dream Car or<br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-emerald-400">Home Today.</span>
           </h1>
           
           <p className="text-xl text-gray-500 font-medium max-w-2xl mx-auto leading-relaxed">
-            Reimagine how you rent, buy, and sell in the Gambian unified marketplace. 
-            Connecting you to premium vehicles and properties.
+            Reimagine how you rent, buy, and sell in Africa. 
+            A unified marketplace connecting you to premium vehicles and properties seamlessly.
           </p>
         </motion.div>
 
@@ -89,17 +89,39 @@ const HeroSection = () => {
         <div className="relative w-full flex items-center justify-center h-full">
             
             {/* APP STORE BUTTONS */}
-            <motion.div 
-                style={{ opacity: btnOpacity, y: btnY }}
-                className="absolute top-[85%] z-10 flex gap-4" 
-            >
-                <a href="#" className="bg-gray-900 hover:bg-gray-800 text-white px-8 py-3 rounded-full font-medium text-lg shadow-lg flex items-center gap-2 transition-transform hover:-translate-y-1">
-                    Download on iOS
-                </a>
-                <a href="#" className="bg-white border border-gray-200 hover:bg-gray-50 text-gray-900 px-8 py-3 rounded-full font-medium text-lg shadow-sm flex items-center gap-2 transition-transform hover:-translate-y-1">
-                    Get it on Android
-                </a>
-            </motion.div>
+<motion.div 
+    style={{ opacity: btnOpacity, y: btnY }}
+    className="absolute top-[85%] z-10 flex gap-4"
+>
+    {/* iOS Button */}
+    <a 
+        href="#"
+        className="bg-gray-900 hover:bg-gray-800 text-white px-8 py-3 rounded-full font-medium text-lg shadow-lg flex items-center gap-3 transition-transform hover:-translate-y-1"
+    >
+        {/* App Store Logo (SVG) */}
+        <img 
+            src="https://upload.wikimedia.org/wikipedia/commons/6/67/App_Store_%28iOS%29.svg"
+            alt="App Store"
+            className="w-6 h-6"
+        />
+        Download on iOS
+    </a>
+
+    {/* Android Button */}
+    <a 
+        href="#"
+        className="bg-white border border-gray-200 hover:bg-gray-50 text-gray-900 px-8 py-3 rounded-full font-medium text-lg shadow-sm flex items-center gap-3 transition-transform hover:-translate-y-1"
+    >
+        {/* Google Play Logo (SVG) */}
+        <img 
+            src="https://upload.wikimedia.org/wikipedia/commons/5/5f/Google_Play_2016_logo.svg"
+            alt="Google Play"
+            className="w-6 h-6"
+        />
+        Get it on Android
+    </a>
+</motion.div>
+
 
             {/* --- SIDE POP-UP MODALS --- */}
             {/* Left Side Group */}
