@@ -11,7 +11,6 @@ import {
   MdPhone, 
   MdArrowForward, 
   MdBusinessCenter,
-  MdCheck
 } from 'react-icons/md';
 import { FaGoogle } from 'react-icons/fa';
 import { useAuth } from '@/lib/auth-store';
@@ -77,17 +76,16 @@ function AuthPageContent() {
         toast.remove(loadId);
         toast.success("Welcome Back", "Redirecting...");
         
-        // Redirect Logic
+        // Login redirect logic
         const redirect = searchParams.get('redirect');
         router.push(redirect || '/explore');
       } else {
         const loadId = toast.loading("Creating Account", "Setting up profile...");
-        // Register creates Firestore profile automatically
+        // Manual email registration still happens directly here because we collect all info upfront
         await register(email, password, userType, fullName, phone);
         toast.remove(loadId);
         toast.success("Account Created", "Welcome to Havanah!");
         
-        // Redirect to dashboard or explore
         router.push(userType === 'agent' ? '/agent/dashboard' : '/explore');
       }
 
@@ -100,13 +98,17 @@ function AuthPageContent() {
   const handleGoogleAuth = async () => {
     try {
       const loadId = toast.loading("Google Auth", "Connecting...");
-      // Pass userType as the role for Google signup
-      await loginWithGoogle(userType);
-      toast.remove(loadId);
-      toast.success("Success", "Redirecting...");
       
-      // Redirect based on user type
-      router.push(userType === 'agent' ? '/agent/dashboard' : '/explore');
+      // 1. Perform pure Google Auth (pop-up)
+      await loginWithGoogle();
+      
+      toast.remove(loadId);
+      toast.success("Verified", "Finalizing setup...");
+      
+      // 2. Redirect to the intermediate Register page
+      // We pass the selected role so the register page knows what to create
+      router.push(`/auth/register?role=${userType}`);
+
     } catch (error: any) {
       const errorMessage = error?.message || error?.code || "Google authentication failed.";
       toast.error("Error", errorMessage);

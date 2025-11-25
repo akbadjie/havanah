@@ -8,7 +8,6 @@ import {
   updateProfile,
   onAuthStateChanged,
   User,
-  getAdditionalUserInfo // Import this to check if user is new
 } from 'firebase/auth';
 import { getAuthInstance } from '@/lib/firebase';
 import { createUserProfile, getUserProfile, UserProfile } from '@/lib/firestore-service';
@@ -28,12 +27,13 @@ interface AuthState {
   user: AuthUser | null;
   loading: boolean;
   error: string | null;
+  // Actions
   register: (email: string, password: string, role: UserRole, displayName?: string, phoneNumber?: string) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
-  loginWithGoogle: (role: UserRole) => Promise<void>;
+  loginWithGoogle: () => Promise<void>; // Removed role param, strictly handles Auth
   logout: () => Promise<void>;
   setError: (error: string | null) => void;
-  initializeAuth: () => void;
+  initializeAuth: () => () => void; // Returns unsubscribe function
 }
 
 export const useAuth = create<AuthState>((set, get) => ({
@@ -41,7 +41,6 @@ export const useAuth = create<AuthState>((set, get) => ({
   loading: true,
   error: null,
 
-  // ... (register and login functions remain the same) ...
   register: async (email: string, password: string, role: UserRole, displayName?: string, phoneNumber?: string) => {
     try {
       set({ error: null, loading: true });
@@ -52,7 +51,7 @@ export const useAuth = create<AuthState>((set, get) => ({
         await updateProfile(result.user, { displayName });
       }
 
-      // CRITICAL: Await this before finishing
+      // Standard Email/Pass registration still creates profile immediately
       await createUserProfile({
         uid: result.user.uid,
         email: result.user.email || email,
@@ -74,7 +73,7 @@ export const useAuth = create<AuthState>((set, get) => ({
       set({ error: null, loading: true });
       const auth = getAuthInstance();
       await signInWithEmailAndPassword(auth, email, password);
-      // We rely on initializeAuth to fetch the profile
+      // initializeAuth listener will handle the state update
       set({ loading: false });
     } catch (error: any) {
       set({ error: error?.message || 'Login failed', loading: false });
@@ -82,51 +81,18 @@ export const useAuth = create<AuthState>((set, get) => ({
     }
   },
 
-  loginWithGoogle: async (role: UserRole) => {
+  loginWithGoogle: async () => {
     try {
       set({ error: null, loading: true });
       const auth = getAuthInstance();
       const provider = new GoogleAuthProvider();
       
-      // 1. Perform the Popup Sign In
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
+      // We strictly perform Auth here. 
+      // We do NOT create the firestore profile here anymore.
+      // The UI will redirect to /auth/register to handle that.
+      await signInWithPopup(auth, provider);
 
-      // 2. Check if Firestore Profile Exists
-      let profile = await getUserProfile(user.uid);
-
-      // 3. If NO profile exists, CREATE one immediately.
-      // We do not rely on "isNewUser" alone, because sometimes a previous creation might have failed.
-      if (!profile) {
-        console.log('Creating new Firestore profile for Google user...');
-        
-        const newProfileData = {
-          uid: user.uid,
-          email: user.email || '',
-          displayName: user.displayName || 'Google User',
-          phoneNumber: user.phoneNumber || undefined,
-          role: role, // Use the role selected in the UI
-          profileImage: user.photoURL || undefined,
-        };
-
-        await createUserProfile(newProfileData);
-        
-        // Update local variable so we can set state immediately
-        profile = { ...newProfileData, createdAt: new Date(), updatedAt: new Date() } as unknown as UserProfile;
-      }
-
-      // 4. Manually update state immediately (don't wait for listener) to prevent UI flash
-      const userObj: AuthUser = {
-        id: user.uid,
-        email: user.email,
-        role: profile.role || role,
-        displayName: user.displayName,
-        phoneNumber: user.phoneNumber,
-        photoURL: user.photoURL,
-      };
-
-      set({ user: userObj, loading: false });
-      
+      set({ loading: false });
     } catch (error: any) {
       console.error("Google Login Error:", error);
       set({ error: error?.message || 'Google login failed', loading: false });
@@ -160,32 +126,16 @@ export const useAuth = create<AuthState>((set, get) => ({
           return;
         }
 
-        // 1. Fetch Profile
+        // Try to fetch profile, but don't crash if it doesn't exist yet
+        // (This is important for the /auth/register page flow)
         let profile = await getUserProfile(firebaseUser.uid);
-
-        // 2. SELF-HEALING: If Auth exists but Firestore is missing (e.g. previous error), create it now.
-        if (!profile) {
-          console.warn('⚠️ User exists in Auth but missing in Firestore. Attempting repair...');
-          try {
-            const fallbackData = {
-              uid: firebaseUser.uid,
-              email: firebaseUser.email || '',
-              displayName: firebaseUser.displayName || 'Recovered User',
-              phoneNumber: firebaseUser.phoneNumber || undefined,
-              role: 'user' as UserRole, // Default to 'user' if recovering
-              profileImage: firebaseUser.photoURL || undefined,
-            };
-            await createUserProfile(fallbackData);
-            profile = fallbackData as any;
-          } catch (createError) {
-            console.error('Failed to auto-repair user profile:', createError);
-          }
-        }
 
         const userObj: AuthUser = {
           id: firebaseUser.uid,
           email: firebaseUser.email,
-          role: profile?.role || 'user',
+          // If profile exists, use its role. If not, default to 'user' temporarily.
+          // The /auth/register page will fix this.
+          role: profile?.role || 'user', 
           displayName: firebaseUser.displayName,
           phoneNumber: firebaseUser.phoneNumber,
           photoURL: firebaseUser.photoURL,
