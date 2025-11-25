@@ -673,8 +673,11 @@ const Footer = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 mb-12">
           <div className="col-span-2 lg:col-span-2">
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center text-white font-bold">H</div>
-              <span className="font-display font-bold text-xl text-gray-900">Havanah</span>
+              <img 
+                src="/logo.jpg" 
+                alt="Havanah Logo" 
+                className="h-8 w-auto object-contain"
+              />
             </div>
             <p className="text-gray-500 text-sm max-w-xs mb-6">
               The #1 Marketplace in Gambia for trusted Real Estate and Vehicle transactions.

@@ -44,10 +44,11 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto h-full flex items-center justify-between px-6">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
-          {/* Replace with your logo image if you have one, or use text */}
-          <span className="text-2xl font-extrabold bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">
-            HAVANAH
-          </span>
+          <img 
+            src="/logo.jpg" 
+            alt="HAVANAH Logo" 
+            className="h-10 w-auto object-contain"
+          />
         </Link>
 
         {/* Desktop Navigation */}

@@ -76,35 +76,40 @@ function AuthPageContent() {
         await login(email, password);
         toast.remove(loadId);
         toast.success("Welcome Back", "Redirecting...");
+        
+        // Redirect Logic
+        const redirect = searchParams.get('redirect');
+        router.push(redirect || '/explore');
       } else {
         const loadId = toast.loading("Creating Account", "Setting up profile...");
+        // Register creates Firestore profile automatically
         await register(email, password, userType, fullName, phone);
         toast.remove(loadId);
         toast.success("Account Created", "Welcome to Havanah!");
-      }
-
-      // Redirect Logic
-      const redirect = searchParams.get('redirect');
-      if (redirect) {
-        router.push(redirect);
-      } else {
+        
+        // Redirect to dashboard or explore
         router.push(userType === 'agent' ? '/agent/dashboard' : '/explore');
       }
 
     } catch (error: any) {
-      toast.error("Authentication Failed", error.message || "Something went wrong.");
+      const errorMessage = error?.message || error?.code || "Something went wrong.";
+      toast.error("Authentication Failed", errorMessage);
     }
   };
 
   const handleGoogleAuth = async () => {
     try {
       const loadId = toast.loading("Google Auth", "Connecting...");
+      // Pass userType as the role for Google signup
       await loginWithGoogle(userType);
       toast.remove(loadId);
       toast.success("Success", "Redirecting...");
-      router.push('/explore');
-    } catch (error) {
-      toast.error("Error", "Google authentication failed.");
+      
+      // Redirect based on user type
+      router.push(userType === 'agent' ? '/agent/dashboard' : '/explore');
+    } catch (error: any) {
+      const errorMessage = error?.message || error?.code || "Google authentication failed.";
+      toast.error("Error", errorMessage);
     }
   };
 
@@ -141,9 +146,11 @@ function AuthPageContent() {
           {/* Header & Logo */}
           <div className="text-center">
             <Link href="/" className="inline-block mb-4">
-              <span className="text-2xl font-extrabold bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent tracking-tight">
-                HAVANAH
-              </span>
+              <img 
+                src="/logo.jpg" 
+                alt="HAVANAH Logo" 
+                className="h-12 w-auto object-contain mx-auto"
+              />
             </Link>
             <h2 className="text-xl font-bold text-gray-900">
               {authMode === 'login' ? 'Welcome Back' : 'Join the Community'}

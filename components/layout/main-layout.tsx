@@ -14,7 +14,12 @@ interface MainLayoutProps {
 export default function MainLayout({ children }: MainLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { user, loading, initializeAuth } = useAuth();
+
+  // 0. Initialize Auth on Mount (Firebase onAuthStateChanged)
+  useEffect(() => {
+    initializeAuth();
+  }, [initializeAuth]);
 
   // 1. Define Route Groups
   const isAuthPage = pathname?.startsWith('/auth');

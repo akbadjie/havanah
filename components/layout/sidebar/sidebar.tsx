@@ -68,8 +68,12 @@ export default function Sidebar() {
         
         {/* Header / Brand */}
         <div className="h-[80px] flex items-center px-8 border-b border-gray-50">
-          <Link href="/" className="text-2xl font-extrabold bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">
-            HAVANAH
+          <Link href="/" className="flex items-center gap-2">
+            <img 
+              src="/logo.jpg" 
+              alt="HAVANAH Logo" 
+              className="h-10 w-auto object-contain"
+            />
           </Link>
         </div>
 
