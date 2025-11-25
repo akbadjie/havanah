@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion, useMotionValue, useTransform, AnimatePresence } from 'framer-motion';
@@ -109,15 +109,15 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gray-50 relative overflow-hidden font-sans">
-      
-      {/* --- Animated Background Blobs --- */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <motion.div 
-          animate={{ y: [0, -40, 0], rotate: [0, 10, 0], scale: [1, 1.1, 1] }} 
-          transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute -top-[10%] -right-[10%] w-[600px] h-[600px] rounded-full blur-[80px] bg-gradient-to-br from-emerald-200/40 to-cyan-200/40" 
-        />
+    <Suspense>
+      <div className="min-h-screen w-full flex items-center justify-center bg-gray-50 relative overflow-hidden font-sans">
+        {/* --- Animated Background Blobs --- */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <motion.div 
+            animate={{ y: [0, -40, 0], rotate: [0, 10, 0], scale: [1, 1.1, 1] }} 
+            transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute -top-[10%] -right-[10%] w-[600px] h-[600px] rounded-full blur-[80px] bg-gradient-to-br from-emerald-200/40 to-cyan-200/40" 
+          />
         <motion.div 
           animate={{ y: [0, 40, 0], rotate: [0, -10, 0], scale: [1, 1.2, 1] }} 
           transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
@@ -291,7 +291,8 @@ export default function AuthPage() {
             By continuing, you agree to our <a href="#" className="underline hover:text-gray-600">Terms</a> and <a href="#" className="underline hover:text-gray-600">Privacy Policy</a>.
           </p>
         </motion.div>
+        </div>
       </div>
-    </div>
+    </Suspense>
   );
 }
