@@ -75,8 +75,8 @@ const HeroSection = () => {
           </div>
           
           <h1 className="text-6xl md:text-8xl font-extrabold tracking-tight text-gray-900 mb-8 leading-[0.9]">
-          Find Your Dream Car or<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-emerald-400">Home Today.</span>
+          Find Your Dream Car or Home<br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-emerald-400">Today.</span>
           </h1>
           
           <p className="text-xl text-gray-500 font-medium max-w-2xl mx-auto leading-relaxed">
