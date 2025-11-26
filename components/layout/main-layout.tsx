@@ -25,6 +25,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
   // 1. Define Route Groups
   const isAuthPage = pathname?.startsWith('/auth');
   
+  // Routes that use the Sidebar (Dashboard, Messaging, etc.)
   const isSidebarRoute = 
     pathname?.startsWith('/agent') ||
     pathname?.startsWith('/user') ||
@@ -32,6 +33,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
     pathname?.startsWith('/connections') ||
     pathname?.startsWith('/account') || 
     pathname?.startsWith('/upgrade');
+
+  // Check specifically for messaging to alter layout behavior
+  const isMessagingPage = pathname?.startsWith('/messaging');
 
   // 2. Auth Protection Logic
   useEffect(() => {
@@ -74,17 +78,25 @@ export default function MainLayout({ children }: MainLayoutProps) {
     return (
       <ToastProvider>
         <GlobalNotificationListener />
-        <div className="flex min-h-screen bg-gray-50">
+        <div className="flex min-h-screen bg-gray-50 overflow-hidden">
           <Sidebar />
           
           {/* 
-             UPDATED MAIN CONTAINER:
-             1. ml-0: No left margin on mobile.
-             2. lg:ml-[280px]: Left margin on desktop for Sidebar.
-             3. pb-24: Bottom padding on mobile so content isn't hidden behind Bottom Nav.
-             4. lg:pb-0: No bottom padding on desktop.
+             FIXED MAIN CONTAINER:
+             1. Logic: If it's the Messaging Page, we REMOVE the bottom padding (pb-24) 
+                and constrain the height to the viewport.
+             2. On Mobile: Height is 100dvh minus the Bottom Nav height (approx 70px-80px).
+             3. On Desktop: Height is 100vh.
           */}
-          <main className="flex-1 ml-0 lg:ml-[280px] pb-24 lg:pb-0 p-0 transition-all duration-300">
+          <main 
+            className={`
+              flex-1 ml-0 lg:ml-[280px] transition-all duration-300 relative
+              ${isMessagingPage 
+                ? 'h-[calc(100dvh-80px)] lg:h-screen p-0 overflow-hidden' // Mobile: Fit above nav. Desktop: Full screen.
+                : 'min-h-screen pb-24 lg:pb-0 p-0' // Standard scrolling behavior for other pages
+              }
+            `}
+          >
             {children}
           </main>
         </div>

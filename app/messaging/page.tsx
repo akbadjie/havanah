@@ -38,13 +38,14 @@ const ContactInfoPanel = ({
   onClose 
 }: { 
   conversationId: string;
-  participants: { [uid: string]: any };
+  participants: { [uid: string]: any }; // simplified participant data
   onClose: () => void;
 }) => {
   const { user } = useAuth();
   const toast = useToast();
   const [activeTab, setActiveTab] = useState<'media' | 'files' | 'links'>('media');
   
+  // Extract "Other" User
   const otherId = Object.keys(participants).find(id => id !== user?.id) || '';
   const name = participants[otherId]?.name || 'User';
   const photo = participants[otherId]?.photo || '/default-avatar.png';
@@ -65,17 +66,20 @@ const ContactInfoPanel = ({
       transition={{ type: 'spring', damping: 25, stiffness: 200 }}
       className="w-full md:w-[350px] bg-white border-l border-gray-100 h-full flex flex-col z-30 shadow-2xl"
     >
-      <div className="p-4 flex items-center gap-3 border-b border-gray-100 bg-gray-50/50 h-[60px] shrink-0">
+      {/* Header */}
+      <div className="p-4 flex items-center gap-3 border-b border-gray-100 bg-gray-50/50">
         <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition-colors"><X size={20} /></button>
         <h2 className="font-bold text-gray-800">Contact Info</h2>
       </div>
 
       <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
+        {/* Profile */}
         <div className="flex flex-col items-center mb-8">
           <div className="w-32 h-32 rounded-full p-1 bg-gradient-to-tr from-emerald-400 to-amber-300 mb-4 shadow-lg">
              <img src={photo} className="w-full h-full rounded-full object-cover border-4 border-white" />
           </div>
           <h2 className="text-2xl font-bold text-gray-900 text-center">{name}</h2>
+          <p className="text-gray-500 text-sm font-medium">+1 (555) 000-0000</p>
           
           <div className="flex gap-4 mt-6 w-full justify-center">
             <button className="flex flex-col items-center gap-1 text-gray-600 hover:text-emerald-600 transition-colors">
@@ -95,6 +99,7 @@ const ContactInfoPanel = ({
 
         <div className="h-2 bg-gray-50 -mx-6 mb-6" />
 
+        {/* Media / Files / Links */}
         <div className="mb-6">
           <div className="flex gap-6 border-b border-gray-100 pb-2 mb-4">
             {['media', 'files', 'links'].map((t) => (
@@ -108,21 +113,59 @@ const ContactInfoPanel = ({
               </button>
             ))}
           </div>
+
           <div className="min-h-[150px]">
-             {/* Mock Content */}
-             {activeTab === 'media' && <div className="text-center text-sm text-gray-400 py-4">No shared media</div>}
-             {activeTab === 'files' && <div className="text-center text-sm text-gray-400 py-4">No shared files</div>}
-             {activeTab === 'links' && <div className="text-center text-sm text-gray-400 py-4">No shared links</div>}
+            {activeTab === 'media' && (
+              <div className="grid grid-cols-3 gap-2">
+                {[1,2,3,4,5,6].map(i => (
+                  <div key={i} className="aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-80">
+                    <img src={`https://picsum.photos/200?random=${i}`} className="w-full h-full object-cover" />
+                  </div>
+                ))}
+              </div>
+            )}
+            {activeTab === 'files' && (
+               <div className="space-y-3">
+                 <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 border border-transparent hover:border-gray-100">
+                   <div className="w-10 h-10 bg-red-50 text-red-500 rounded-lg flex items-center justify-center"><FileText size={20} /></div>
+                   <div><p className="text-sm font-bold">Contract.pdf</p><p className="text-xs text-gray-400">2.4 MB • Yesterday</p></div>
+                 </div>
+               </div>
+            )}
+             {activeTab === 'links' && (
+               <div className="space-y-3">
+                 <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50">
+                   <div className="w-10 h-10 bg-blue-50 text-blue-500 rounded-lg flex items-center justify-center"><LinkIcon size={20} /></div>
+                   <div className="overflow-hidden"><p className="text-sm font-bold truncate">https://realestate.com/listing/123</p></div>
+                 </div>
+               </div>
+            )}
           </div>
         </div>
 
         <div className="h-2 bg-gray-50 -mx-6 mb-6" />
 
+        {/* Settings */}
+        <div className="space-y-2">
+           <button className="w-full flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl transition-colors">
+             <div className="flex items-center gap-3 text-gray-700">
+               <Bell size={20} /> <span className="font-medium">Mute Notifications</span>
+             </div>
+             <div className="w-10 h-6 bg-gray-200 rounded-full relative"><div className="w-4 h-4 bg-white rounded-full absolute left-1 top-1 shadow-sm" /></div>
+           </button>
+        </div>
+
+        <div className="h-2 bg-gray-50 -mx-6 my-6" />
+
+        {/* Danger Zone */}
         <div className="space-y-2">
           <button onClick={handleBlock} className="w-full flex items-center gap-3 p-3 hover:bg-red-50 text-red-600 rounded-xl transition-colors font-medium">
             <Ban size={20} /> Block {name}
           </button>
-          <button className="w-full flex items-center gap-3 p-3 hover:bg-gray-100 text-gray-600 rounded-xl transition-colors font-medium">
+          <button className="w-full flex items-center gap-3 p-3 hover:bg-red-50 text-red-600 rounded-xl transition-colors font-medium">
+            <ThumbsDown size={20} /> Report Contact
+          </button>
+          <button className="w-full flex items-center gap-3 p-3 hover:bg-gray-100 text-gray-600 rounded-xl transition-colors font-medium mt-4">
             <Trash2 size={20} /> Delete Chat
           </button>
         </div>
@@ -145,6 +188,7 @@ const NewChatModal = ({ onClose, onStartChat }: { onClose: () => void; onStartCh
       setLoading(true);
       try {
         const db = getFirestoreInstance();
+        // Simplified Client-side filtering for demo (production needs Algolia/Typesense)
         const q = query(collection(db, 'users'), limit(50));
         const snap = await getDocs(q);
         
@@ -191,10 +235,21 @@ const NewChatModal = ({ onClose, onStartChat }: { onClose: () => void; onStartCh
                 onChange={e => setQueryText(e.target.value)}
              />
            </div>
+           
+           <button className="flex items-center gap-3 w-full mt-4 p-3 hover:bg-emerald-50 rounded-xl transition-colors text-emerald-700 font-semibold group">
+             <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center group-hover:bg-emerald-200 transition-colors">
+               <Users size={20} />
+             </div>
+             Create New Group
+           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-2">
-           {loading ? <div className="text-center py-8 text-gray-400">Searching...</div> : (
+           {loading ? (
+             <div className="text-center py-8 text-gray-400">Searching...</div>
+           ) : results.length === 0 && queryText.length > 1 ? (
+             <div className="text-center py-8 text-gray-400">No users found.</div>
+           ) : (
              <div className="space-y-1">
                 {results.map(u => (
                   <div key={u.uid} onClick={() => onStartChat(u)} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
@@ -227,6 +282,7 @@ function MessagingContent() {
   const [showProfilePanel, setShowProfilePanel] = useState(false);
   const [showNewChat, setShowNewChat] = useState(false);
 
+  // 1. Initial Load & Deep Links
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     handleResize();
@@ -238,16 +294,23 @@ function MessagingContent() {
     return () => window.removeEventListener('resize', handleResize);
   }, [searchParams]);
 
+  // 2. Load Conversation Data when ID changes
   useEffect(() => {
     const loadConv = async () => {
       if (!activeConvId || !user) return;
-      const convs = await getConversations(user.id);
+      // We could use the realtime listener here or just fetch once to get metadata for the layout
+      // For simplicity, we'll let the SidebarList handle list data, 
+      // but we need specific conv data for ActiveChat props if not passed directly.
+      // Ideally, ActiveChat fetches its own messages, but needs basic info (participants)
+      
+      const convs = await getConversations(user.id); // This is cached usually or fast
       const found = convs.find(c => c.id === activeConvId);
       if (found) setActiveConversation(found);
     };
     loadConv();
   }, [activeConvId, user]);
 
+  // 3. Handlers
   const handleStartChat = async (target: UserSearchResult) => {
     if (!user) return;
     try {
@@ -262,19 +325,19 @@ function MessagingContent() {
       setShowNewChat(false);
       setActiveConvId(convId);
       router.push(`/messaging?id=${convId}`);
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  if (!user) return <div className="h-screen flex items-center justify-center">Loading...</div>;
+  if (!user) return <div className="h-full flex items-center justify-center">Loading Auth...</div>;
 
   return (
-    // FIX: Changed from relative to FIXED positioning to anchor below navbar (top-[64px])
-    // 'top-[64px]' assumes your navbar is 64px. If it's 80px, change to 'top-[80px]'.
-    // This forces the messaging UI to fill the rest of the screen exactly, preventing gaps.
-    <div className="fixed inset-0 top-[64px] w-full bg-[#f0f2f5] z-0 overflow-hidden font-sans flex">
+    <div className="flex h-full w-full bg-[#f0f2f5] relative overflow-hidden font-sans">
       
       {/* Background Ambient Mesh */}
-      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-emerald-400/20 blur-[120px] rounded-full pointer-events-none mix-blend-multiply animate-pulse z-0" />
+      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-emerald-400/20 blur-[120px] rounded-full pointer-events-none mix-blend-multiply animate-pulse" />
+      <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-amber-400/20 blur-[120px] rounded-full pointer-events-none mix-blend-multiply animate-pulse" />
 
       {/* --- LEFT SIDEBAR (List) --- */}
       <motion.aside 
@@ -284,7 +347,7 @@ function MessagingContent() {
           width: isMobile ? '100%' : 'auto' 
         }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        className={`z-20 h-full bg-white flex-shrink-0 shadow-xl border-r border-gray-100 ${isMobile && activeConvId ? 'absolute inset-0' : 'relative w-[380px]'}`}
+        className={`z-20 h-full bg-white flex-shrink-0 ${isMobile && activeConvId ? 'absolute inset-0' : 'relative'}`}
       >
         <SidebarList 
           activeConvId={activeConvId}
@@ -297,7 +360,7 @@ function MessagingContent() {
       </motion.aside>
 
       {/* --- MIDDLE (Active Chat) --- */}
-      <main className={`flex-1 relative h-full flex flex-col bg-[#efeae2] z-10 ${isMobile && !activeConvId ? 'hidden' : 'flex'}`}>
+      <main className={`flex-1 relative h-full flex flex-col bg-[#efeae2] ${isMobile && !activeConvId ? 'hidden' : 'flex'}`}>
         {activeConvId && activeConversation ? (
           <ActiveChat 
             conversation={activeConversation}
@@ -319,11 +382,13 @@ function MessagingContent() {
               className="relative z-10"
             >
               <div className="w-64 h-64 bg-emerald-50 rounded-full flex items-center justify-center mb-6 mx-auto shadow-inner">
-                 <span className="text-6xl opacity-20">💬</span>
+                <img src="/illustrations/chat-placeholder.svg" className="w-40 opacity-50" alt="" onError={(e) => e.currentTarget.style.display='none'} /> 
+                <span className="text-6xl opacity-20">💬</span>
               </div>
               <h1 className="text-3xl font-extrabold text-gray-800 mb-2">Welcome to Messages</h1>
               <p className="text-gray-500 max-w-md mx-auto mb-8">
-                Send and receive messages securely.
+                Send and receive messages with agents and clients securely. 
+                End-to-end encrypted connection.
               </p>
               <button 
                 onClick={() => setShowNewChat(true)}
@@ -339,7 +404,8 @@ function MessagingContent() {
       {/* --- RIGHT SIDEBAR (Profile Info) --- */}
       <AnimatePresence>
         {showProfilePanel && activeConversation && (
-          <div className="absolute inset-y-0 right-0 z-40 md:relative md:z-20 flex h-full">
+          <div className="absolute inset-y-0 right-0 z-40 md:relative md:z-0 flex">
+             {/* Backdrop for Mobile */}
              <motion.div 
                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                onClick={() => setShowProfilePanel(false)}
@@ -363,6 +429,7 @@ function MessagingContent() {
         )}
       </AnimatePresence>
 
+      {/* --- NEW CHAT MODAL --- */}
       <AnimatePresence>
         {showNewChat && (
           <NewChatModal 
@@ -371,10 +438,12 @@ function MessagingContent() {
           />
         )}
       </AnimatePresence>
+
     </div>
   );
 }
 
+// --- PAGE WRAPPER (Suspense Boundary) ---
 export default function MessagingPage() {
   return (
     <Suspense fallback={<div className="h-screen w-full flex items-center justify-center bg-gray-50">Loading...</div>}>
