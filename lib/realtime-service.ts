@@ -367,6 +367,25 @@ export const listenToConversations = (userId: string, callback: (convs: Conversa
   });
 };
 
+/**
+ * Fetch conversations once (non-real-time) for the given user.
+ * Useful for initial data loading.
+ */
+export const getConversations = async (userId: string): Promise<Conversation[]> => {
+  const db = getFirestoreInstance();
+  const q = query(
+    collection(db, 'conversations'),
+    where('participants', 'array-contains', userId),
+    orderBy('lastMessageTime', 'desc')
+  );
+
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  })) as Conversation[];
+};
+
 // --- STATUS / STORIES ---
 
 export const addStatus = async (
