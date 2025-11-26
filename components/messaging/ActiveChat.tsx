@@ -223,7 +223,7 @@ export default function ActiveChat({
   const [forwardMessage, setForwardMessage] = useState<Message | null>(null);
 
   // Refs
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Computed: Other User Info
@@ -244,11 +244,25 @@ export default function ActiveChat({
   }, [conversation.id, currentUserId]);
 
   // 2. Scroll Logic
-  const scrollToBottom = () => {
-    setTimeout(() => {
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
+  // We explicitly set the container's scrollTop to avoid affecting the page/body scroll.
+  const scrollToBottom = (smooth = false) => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    // Prefer instant jump to avoid page-level smooth scrolling that can move the body.
+    if (smooth && typeof container.scrollTo === 'function') {
+      container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+    } else {
+      container.scrollTop = container.scrollHeight;
+    }
   };
+
+  // Also ensure we snap to bottom whenever messages change (covers initial mount and updates).
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    // instant set to avoid visual jump of the page
+    container.scrollTop = container.scrollHeight;
+  }, [messages]);
 
   // 3. Typing Handler
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -376,7 +390,7 @@ export default function ActiveChat({
       </header>
 
       {/* --- MESSAGE LIST --- */}
-      <main className="flex-1 overflow-y-auto p-4 z-10 custom-scrollbar">
+      <main ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 z-10 custom-scrollbar">
         <div className="max-w-4xl mx-auto flex flex-col justify-end min-h-full">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center flex-1 opacity-50 text-center p-8">
@@ -424,7 +438,7 @@ export default function ActiveChat({
               return acc;
             }, [])
           )}
-          <div ref={bottomRef} />
+          {/* bottom spacer removed; scrolling is handled via scrollContainerRef */}
         </div>
       </main>
 
