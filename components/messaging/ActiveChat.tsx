@@ -428,7 +428,7 @@ export default function ActiveChat({
       </main>
 
       {/* --- FOOTER INPUT --- */}
-      <footer className="p-2 md:p-4 bg-white/90 backdrop-blur-xl border-t border-gray-200 z-20 flex-shrink-0">
+      <footer className="p-2 md:p-4 bg-white/90 backdrop-blur-xl border-t border-gray-200 z-20">
         
         {/* Reply Preview */}
         <AnimatePresence>
@@ -471,7 +471,7 @@ export default function ActiveChat({
                 initial={{ opacity: 0, y: 20, scale: 0.9 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 20, scale: 0.9 }}
-                className="absolute bottom-full left-0 mb-2 bg-white rounded-2xl shadow-xl border border-gray-100 p-2 flex flex-col gap-2 z-50 min-w-[160px]"
+                className="absolute bottom-16 left-0 bg-white rounded-2xl shadow-xl border border-gray-100 p-2 flex flex-col gap-2 z-50 min-w-[160px]"
               >
                 <button 
                   type="button" 
