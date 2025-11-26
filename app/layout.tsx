@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import MainLayout from '@/components/layout/main-layout';
+import { CallProvider } from '@/context/CallContext';
 
 // Load Inter font
 const inter = Inter({ subsets: ['latin'] });
@@ -24,9 +25,12 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         {/* MainLayout handles Auth Protection, Navbar vs Sidebar logic, and Toast Provider */}
-        <MainLayout>
-          {children}
-        </MainLayout>
+        {/* Wrap the whole app with CallProvider so call context is available globally */}
+        <CallProvider>
+          <MainLayout>
+            {children}
+          </MainLayout>
+        </CallProvider>
       </body>
     </html>
   );

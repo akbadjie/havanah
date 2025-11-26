@@ -19,7 +19,7 @@ export default function GlobalNotificationListener() {
 
   useEffect(() => {
     // Preload notification sound
-    audioRef.current = new Audio('/sounds/notification_pop.mp3'); // Ensure this file exists in public/sounds/
+    audioRef.current = new Audio('/sounds/notification_pop.wav'); // Ensure this file exists in public/sounds/
     audioRef.current.volume = 0.5;
   }, []);
 

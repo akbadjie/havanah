@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, X, Image as ImageIcon, Type, Send, ChevronLeft, ChevronRight, 
@@ -14,7 +15,7 @@ import {
   viewStatus, 
   UserStatus 
 } from '@/lib/realtime-service';
-import { uploadImage } from '@/lib/storage-service'; // Assuming you have this helper
+import { uploadImage } from '@/lib/storage-service'; 
 
 // --- TYPES ---
 interface GroupedStatus {
@@ -76,8 +77,6 @@ const CreateStatusModal = ({ onClose }: { onClose: () => void }) => {
       } else if (mode === 'text') {
         if (!text.trim()) return;
         // For text, we save the gradient class as background
-        // Ideally save the specific colors, here we save the index or class string
-        // We'll pass the gradient class string as 'background'
       }
 
       await addStatus(
@@ -99,12 +98,14 @@ const CreateStatusModal = ({ onClose }: { onClose: () => void }) => {
     }
   };
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <motion.div 
       initial={{ opacity: 0, scale: 0.9, rotateX: 20 }}
       animate={{ opacity: 1, scale: 1, rotateX: 0 }}
       exit={{ opacity: 0, scale: 0.9, rotateX: -20 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md perspective-1000"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md perspective-1000"
     >
       <div className="w-full max-w-md bg-zinc-900 rounded-3xl overflow-hidden shadow-2xl border border-white/10 relative h-[80vh] flex flex-col">
         {/* Header */}
@@ -177,7 +178,8 @@ const CreateStatusModal = ({ onClose }: { onClose: () => void }) => {
           )}
         </div>
       </div>
-    </motion.div>
+    </motion.div>,
+    document.body
   );
 };
 
@@ -212,8 +214,8 @@ const StatusViewer = ({
   useEffect(() => {
     if (isPaused) return;
     
-    const duration = currentStatus.type === 'video' ? 10000 : 5000; // 5s for img/text, 10s video (simplified)
-    const step = 50; // Update every 50ms
+    const duration = currentStatus.type === 'video' ? 10000 : 5000; // 5s for img/text, 10s video
+    const step = 50; 
     const increment = (step / duration) * 100;
 
     const timer = setInterval(() => {
@@ -249,12 +251,14 @@ const StatusViewer = ({
     }
   };
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 1.05 }}
-      className="fixed inset-0 z-[60] bg-black flex items-center justify-center"
+      className="fixed inset-0 z-[100] bg-black flex items-center justify-center"
     >
       <div 
         className="w-full h-full md:max-w-md md:h-[90vh] md:rounded-3xl relative bg-zinc-900 overflow-hidden flex flex-col"
@@ -322,7 +326,8 @@ const StatusViewer = ({
           </div>
         )}
       </div>
-    </motion.div>
+    </motion.div>,
+    document.body
   );
 };
 

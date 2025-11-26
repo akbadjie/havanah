@@ -13,7 +13,10 @@ import {
   addDoc,
   Timestamp,
   Query,
-  serverTimestamp
+  serverTimestamp,
+  onSnapshot,
+  arrayUnion,
+  arrayRemove
 } from 'firebase/firestore';
 import { getFirestoreInstance } from '@/lib/firebase';
 
@@ -35,6 +38,7 @@ const cleanData = (data: any) => {
 
 // ==================== TYPES & INTERFACES ====================
 
+// --- LISTING TYPES ---
 export interface Listing {
   id: string;
   agentId: string;
@@ -99,6 +103,56 @@ export interface AgentStats {
   totalViews: number;
   totalInquiries: number;
   recentInquiries: number; // Count of pending inquiries
+}
+
+// --- MESSAGING TYPES ---
+
+export type MessageType = 'text' | 'image' | 'video' | 'audio' | 'file';
+export type MessageStatus = 'sent' | 'delivered' | 'read';
+
+export interface Reaction {
+  emoji: string;
+  userId: string;
+}
+
+export interface Message {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  senderName: string;
+  text: string;       
+  mediaUrl?: string;  
+  mediaDuration?: number; 
+  type: MessageType;
+  isOneTimeView?: boolean;
+  status: MessageStatus;
+  replyTo?: {
+    id: string;
+    text: string;
+    senderName: string;
+  } | null;
+  reactions: Reaction[];
+  isEdited?: boolean;
+  isDeleted?: boolean;
+  timestamp: any; // Firestore Timestamp or FieldValue
+}
+
+export interface Conversation {
+  id: string;
+  participants: string[];
+  participantNames: { [uid: string]: string }; 
+  participantPhotos: { [uid: string]: string }; 
+  lastMessage: string;
+  lastMessageTime: any;
+  lastMessageSenderId: string;
+  lastMessageType: MessageType;
+  unreadCount: { [uid: string]: number };
+  typingUsers: { [uid: string]: boolean };
+  isGroup: boolean;
+  groupName?: string;
+  groupImage?: string;
+  groupAdmins?: string[];
+  blockedBy?: string[];
 }
 
 // ==================== LISTINGS SERVICE ====================
@@ -518,7 +572,284 @@ export const getAgentStats = async (agentId: string): Promise<AgentStats> => {
   }
 };
 
+// ==================== MESSAGING & CHAT SERVICES ====================
+
+/**
+ * Sends a message (Text, Media, Audio, etc.)
+ */
+export const sendMessage = async (
+  conversationId: string, 
+  senderId: string, 
+  senderName: string, 
+  receiverIds: string[], 
+  content: string,
+  type: MessageType = 'text',
+  mediaUrl?: string,
+  mediaDuration?: number,
+  replyTo?: Message['replyTo'],
+  isOneTimeView: boolean = false
+) => {
+  const db = getFirestoreInstance();
+
+  // 1. Check if conversation allows messaging (e.g. not blocked)
+  const convRef = doc(db, 'conversations', conversationId);
+  
+  // 2. Prepare Message Data
+  const newMessage: any = {
+    conversationId,
+    senderId,
+    senderName,
+    text: content || '', // Ensure text is string even if empty (for media)
+    type,
+    status: 'sent',
+    reactions: [],
+    timestamp: serverTimestamp(),
+  };
+
+  if (mediaUrl) newMessage.mediaUrl = mediaUrl;
+  if (mediaDuration) newMessage.mediaDuration = mediaDuration;
+  if (replyTo) newMessage.replyTo = replyTo;
+  if (isOneTimeView) newMessage.isOneTimeView = true;
+
+  // 3. Add to Subcollection
+  const messagesRef = collection(db, 'conversations', conversationId, 'messages');
+  await addDoc(messagesRef, newMessage);
+
+  // 4. Update Conversation Document (Last Message, Unread Counts)
+  // Generate last message text based on type
+  let lastMessageText = content;
+  if (type === 'image') lastMessageText = '📷 Photo';
+  if (type === 'video') lastMessageText = '🎥 Video';
+  if (type === 'audio') lastMessageText = '🎤 Voice Message';
+
+  const updates: any = {
+    lastMessage: lastMessageText,
+    lastMessageTime: serverTimestamp(),
+    lastMessageSenderId: senderId,
+    lastMessageType: type,
+  };
+
+  await updateDoc(convRef, updates);
+};
+
+/**
+ * Listens to messages in real-time.
+ */
+export const listenToMessages = (conversationId: string, callback: (msgs: Message[]) => void) => {
+  const db = getFirestoreInstance();
+  const q = query(
+    collection(db, 'conversations', conversationId, 'messages'),
+    orderBy('timestamp', 'asc')
+  );
+
+  return onSnapshot(q, (snapshot) => {
+    const messages = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as Message[];
+    callback(messages);
+  });
+};
+
+/**
+ * Marks messages as 'read' or 'delivered'.
+ */
+export const updateMessageStatus = async (
+  conversationId: string, 
+  userId: string, // Current user
+  status: 'delivered' | 'read'
+) => {
+  const db = getFirestoreInstance();
+  const msgsRef = collection(db, 'conversations', conversationId, 'messages');
+  
+  // Query messages NOT sent by me, that are not yet 'read'
+  // Note: Firestore limits compound queries, so we might fetch recent ones and filter.
+  const q = query(msgsRef, orderBy('timestamp', 'desc'), limit(20));
+  const snapshot = await getDocs(q);
+  
+  const batchUpdates = [];
+  
+  for (const docSnap of snapshot.docs) {
+    const data = docSnap.data() as Message;
+    // If message is not from me AND status is older than the new status
+    if (data.senderId !== userId) {
+      if (status === 'read' && data.status !== 'read') {
+         batchUpdates.push(updateDoc(docSnap.ref, { status: 'read' }));
+      } else if (status === 'delivered' && data.status === 'sent') {
+         batchUpdates.push(updateDoc(docSnap.ref, { status: 'delivered' }));
+      }
+    }
+  }
+
+  await Promise.all(batchUpdates);
+};
+
+/**
+ * Soft delete a message
+ */
+export const deleteMessage = async (conversationId: string, messageId: string) => {
+  const db = getFirestoreInstance();
+  const msgRef = doc(db, 'conversations', conversationId, 'messages', messageId);
+  await updateDoc(msgRef, {
+    isDeleted: true,
+    text: '',
+    mediaUrl: null,
+    type: 'text'
+  });
+};
+
+/**
+ * Sets typing status
+ */
+export const setTypingStatus = async (conversationId: string, userId: string, isTyping: boolean) => {
+  const db = getFirestoreInstance();
+  const convRef = doc(db, 'conversations', conversationId);
+  await updateDoc(convRef, {
+    [`typingUsers.${userId}`]: isTyping
+  });
+};
+
+// ==================== CONVERSATION HELPERS ====================
+
+export const getOrCreateConversation = async (
+  currentUserId: string, 
+  targetUserId: string,
+  currentUserName: string,
+  targetUserName: string,
+  currentUserPhoto?: string,
+  targetUserPhoto?: string
+) => {
+  const db = getFirestoreInstance();
+  
+  // 1. Query for existing 1-on-1 conversation
+  const q = query(
+    collection(db, 'conversations'), 
+    where('participants', 'array-contains', currentUserId),
+    where('isGroup', '==', false)
+  );
+  
+  const snapshot = await getDocs(q);
+  const existing = snapshot.docs.find(doc => {
+    const data = doc.data();
+    return data.participants.includes(targetUserId);
+  });
+
+  if (existing) return existing.id;
+
+  // 2. Create New
+  const newConv = {
+    participants: [currentUserId, targetUserId],
+    participantNames: {
+      [currentUserId]: currentUserName,
+      [targetUserId]: targetUserName
+    },
+    participantPhotos: {
+      [currentUserId]: currentUserPhoto || '',
+      [targetUserId]: targetUserPhoto || ''
+    },
+    lastMessage: '',
+    lastMessageTime: serverTimestamp(),
+    lastMessageSenderId: '',
+    lastMessageType: 'text',
+    unreadCount: {
+      [currentUserId]: 0,
+      [targetUserId]: 0
+    },
+    typingUsers: {},
+    isGroup: false,
+    createdAt: serverTimestamp()
+  };
+
+  const docRef = await addDoc(collection(db, 'conversations'), newConv);
+  return docRef.id;
+};
+
+export const listenToConversations = (userId: string, callback: (convs: Conversation[]) => void) => {
+  const db = getFirestoreInstance();
+  const q = query(
+    collection(db, 'conversations'),
+    where('participants', 'array-contains', userId),
+    orderBy('lastMessageTime', 'desc')
+  );
+
+  return onSnapshot(q, (snapshot) => {
+    const convs = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as Conversation[];
+    callback(convs);
+  });
+};
+
+// ==================== BLOCK / DELETE / REPORT HELPERS ====================
+
+/**
+ * Blocks a user within the context of a specific conversation.
+ * This prevents messages from being sent in this conversation.
+ */
+export const blockUserInConversation = async (conversationId: string, blockedByUserId: string) => {
+  const db = getFirestoreInstance();
+  const convRef = doc(db, 'conversations', conversationId);
+  
+  await updateDoc(convRef, {
+    // We add the ID of the person *doing* the blocking
+    blockedBy: arrayUnion(blockedByUserId)
+  });
+};
+
+/**
+ * Unblocks a user in the conversation.
+ */
+export const unblockUserInConversation = async (conversationId: string, unblockedByUserId: string) => {
+  const db = getFirestoreInstance();
+  const convRef = doc(db, 'conversations', conversationId);
+  
+  await updateDoc(convRef, {
+    blockedBy: arrayRemove(unblockedByUserId)
+  });
+};
+
+/**
+ * Checks if a conversation is blocked.
+ * This is useful for UI states (disabling input).
+ */
+export const isConversationBlocked = (conversation: any): boolean => {
+  return conversation?.blockedBy && conversation.blockedBy.length > 0;
+};
+
+// --- DELETE LOGIC ---
+
+/**
+ * Deletes a conversation.
+ * Note: In Firebase, deleting a document does NOT automatically delete subcollections (messages).
+ * For a full production app, you should use a Cloud Function to recursively delete 'messages'.
+ * For this implementation, deleting the parent doc removes it from the UI list.
+ */
+export const deleteConversation = async (conversationId: string) => {
+  const db = getFirestoreInstance();
+  const convRef = doc(db, 'conversations', conversationId);
+  
+  await deleteDoc(convRef);
+};
+
+/**
+ * Report a user (Placeholder for creating a support ticket/admin log)
+ */
+export const reportUser = async (reporterId: string, reportedUserId: string, reason: string) => {
+  const db = getFirestoreInstance();
+  // Simply logging to a 'reports' collection
+  await addDoc(collection(db, 'reports'), {
+    reporterId,
+    reportedUserId,
+    reason,
+    timestamp: serverTimestamp()
+  });
+};
+
+// ==================== EXPORTS ====================
+
 export default {
+  // Listings
   createListing,
   getAgentListings,
   getAllListings,
@@ -527,14 +858,36 @@ export default {
   deleteListing,
   incrementListingViews,
   advancedSearchListings,
+  
+  // Inquiries
   createInquiry,
   getAgentInquiries,
   getUserApplications,
   updateInquiryStatus,
+  
+  // User Profile & Favorites
   createUserProfile,
   getUserProfile,
   updateUserProfile,
   toggleFavorite,
   getUserFavorites,
+  
+  // Dashboard Stats
   getAgentStats,
+
+  // Messaging / Chat
+  sendMessage,
+  listenToMessages,
+  updateMessageStatus,
+  deleteMessage,
+  setTypingStatus,
+  getOrCreateConversation,
+  listenToConversations
+  ,
+  // Block / Delete / Report
+  blockUserInConversation,
+  unblockUserInConversation,
+  isConversationBlocked,
+  deleteConversation,
+  reportUser
 };
