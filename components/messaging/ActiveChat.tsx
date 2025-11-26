@@ -24,7 +24,8 @@ import {
 import { uploadImage, uploadVideo } from '@/lib/storage-service';
 import AudioRecorder from './AudioRecorder';
 import MediaLightbox from './MediaLightbox';
-import SwipeableMessage from './SwipeableMessage'; 
+import SwipeableMessage from './SwipeableMessage';
+import ForwardModal from './ForwardModal'; 
 
 // --- TYPES ---
 
@@ -69,12 +70,16 @@ const MessageBubble = ({
   msg, 
   isMe, 
   onReply, 
-  onDelete 
+  onDelete,
+  onForward,
+  onMediaClick
 }: { 
   msg: Message; 
   isMe: boolean; 
   onReply: (msg: Message) => void;
   onDelete: (id: string) => void;
+  onForward: (msg: Message) => void;
+  onMediaClick: (src: string, type: 'image'|'video') => void;
 }) => {
   const [showMenu, setShowMenu] = useState(false);
   const [isViewOnceOpened, setIsViewOnceOpened] = useState(false);
@@ -142,7 +147,7 @@ const MessageBubble = ({
                   <img 
                     src={msg.mediaUrl} 
                     alt="Sent image" 
-                    onClick={() => setLightboxMedia({ src: msg.mediaUrl!, type: 'image' })}
+                    onClick={() => onMediaClick(msg.mediaUrl!, 'image')}
                     className="rounded-lg mb-2 max-h-64 object-cover w-full cursor-pointer hover:opacity-95" 
                   />
                 )
@@ -151,7 +156,7 @@ const MessageBubble = ({
               {msg.type === 'video' && msg.mediaUrl && (
                  <video 
                    src={msg.mediaUrl} 
-                   onClick={() => setLightboxMedia({ src: msg.mediaUrl!, type: 'video' })}
+                   onClick={() => onMediaClick(msg.mediaUrl!, 'video')}
                    controls 
                    className="rounded-lg mb-2 max-h-64 w-full bg-black cursor-pointer" 
                  />
@@ -177,6 +182,9 @@ const MessageBubble = ({
           `}>
              <button onClick={() => onReply(msg)} className="p-2 hover:bg-gray-100 rounded-full text-gray-600" title="Reply">
                <Reply size={16} />
+             </button>
+             <button onClick={() => onForward(msg)} className="p-2 hover:bg-emerald-50 rounded-full text-emerald-600" title="Forward">
+               <MoreVertical size={16} />
              </button>
              {/* Only delete my own messages */}
              {isMe && !msg.isDeleted && (
@@ -211,6 +219,7 @@ export default function ActiveChat({
   const [isRecording, setIsRecording] = useState(false); // Visual Only for now
   const [isViewOnce, setIsViewOnce] = useState(false);
   const [lightboxMedia, setLightboxMedia] = useState<{ src: string, type: 'image'|'video' } | null>(null);
+  const [forwardMessage, setForwardMessage] = useState<Message | null>(null);
 
   // Refs
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -406,6 +415,8 @@ export default function ActiveChat({
                     isMe={msg.senderId === currentUserId}
                     onReply={(m) => { setReplyingTo(m); fileInputRef.current?.focus(); }}
                     onDelete={(id) => deleteMessage(conversation.id, id)}
+                    onForward={(m) => setForwardMessage(m)}
+                    onMediaClick={(src, type) => setLightboxMedia({ src, type })}
                   />
                 </SwipeableMessage>
               );
@@ -417,7 +428,7 @@ export default function ActiveChat({
       </main>
 
       {/* --- FOOTER INPUT --- */}
-      <footer className="p-2 md:p-4 bg-white/90 backdrop-blur-xl border-t border-gray-200 z-20">
+      <footer className="p-2 md:p-4 bg-white/90 backdrop-blur-xl border-t border-gray-200 z-20 flex-shrink-0">
         
         {/* Reply Preview */}
         <AnimatePresence>
@@ -460,7 +471,7 @@ export default function ActiveChat({
                 initial={{ opacity: 0, y: 20, scale: 0.9 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 20, scale: 0.9 }}
-                className="absolute bottom-16 left-0 bg-white rounded-2xl shadow-xl border border-gray-100 p-2 flex flex-col gap-2 z-50 min-w-[160px]"
+                className="absolute bottom-full left-0 mb-2 bg-white rounded-2xl shadow-xl border border-gray-100 p-2 flex flex-col gap-2 z-50 min-w-[160px]"
               >
                 <button 
                   type="button" 
@@ -554,6 +565,16 @@ export default function ActiveChat({
             src={lightboxMedia.src} 
             type={lightboxMedia.type} 
             onClose={() => setLightboxMedia(null)} 
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {forwardMessage && (
+          <ForwardModal 
+            message={forwardMessage} 
+            currentConvId={conversation.id}
+            onClose={() => setForwardMessage(null)} 
           />
         )}
       </AnimatePresence>
